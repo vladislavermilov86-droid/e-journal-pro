@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { 
   Users, BookOpen, Calendar, Mail, Settings, LogOut, 
-  BarChart2, CloudIcon, RefreshCw, AlertTriangle, Database, Info
+  BarChart2, CloudIcon, RefreshCw, AlertTriangle, Database, Info, ChevronRight
 } from 'lucide-react';
 import { 
   Class, Student, Subject, Lesson, GradeCell, Message, 
@@ -100,7 +100,7 @@ const App: React.FC = () => {
   }, [isAuthenticated, loadAllData]);
 
   const syncGrade = async (grade: GradeCell) => {
-    if (mode !== 'real') return;
+    // Пытаемся сохранить всегда. Если БД настроена - сохранится.
     await apiRequest('grades', 'POST', grade);
   };
 
@@ -108,6 +108,7 @@ const App: React.FC = () => {
     setIsSyncing(true);
     await apiRequest('lessons', isDelete ? 'DELETE' : 'POST', lesson);
     setIsSyncing(false);
+    // После сохранения урока обновляем всё, чтобы подтянулись ID и связи
     loadAllData();
   };
 
@@ -115,7 +116,7 @@ const App: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-        <p className="font-bold text-slate-600">Загрузка данных...</p>
+        <p className="font-bold text-slate-600">Соединение с Neon...</p>
       </div>
     </div>
   );
@@ -125,12 +126,16 @@ const App: React.FC = () => {
   return (
     <HashRouter>
       <div className="flex min-h-screen bg-slate-50">
-        <aside className="w-64 bg-white border-r border-slate-200 h-screen sticky top-0 flex flex-col shadow-sm z-40">
-          <div className="p-6 border-b border-slate-100 flex items-center gap-3">
-            <div className="bg-indigo-600 p-2 rounded-lg text-white"><BookOpen size={24} /></div>
-            <span className="text-xl font-bold text-slate-800">E-Journal <span className="text-indigo-600">Pro</span></span>
+        <aside className="w-72 bg-white border-r border-slate-200 h-screen sticky top-0 flex flex-col shadow-sm z-40">
+          <div className="p-8 border-b border-slate-100 flex items-center gap-4">
+            <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-indigo-100"><BookOpen size={24} /></div>
+            <div>
+              <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none">E-Journal</h1>
+              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mt-1">Professional Pro</p>
+            </div>
           </div>
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             <SidebarLink to="/journal" icon={<BookOpen size={20} />} label="Журнал" />
             <SidebarLink to="/classes" icon={<Users size={20} />} label="Классы" />
             <SidebarLink to="/schedule" icon={<Calendar size={20} />} label="Расписание" />
@@ -138,21 +143,32 @@ const App: React.FC = () => {
             <SidebarLink to="/messages" icon={<Mail size={20} />} label="Сообщения" />
             <SidebarLink to="/settings" icon={<Settings size={20} />} label="Настройки" />
           </nav>
-          <div className="p-4 border-t border-slate-100 space-y-3">
+
+          <div className="p-6 border-t border-slate-100 space-y-4">
             {mode === 'demo' && (
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 shadow-sm animate-pulse">
                 <div className="flex items-center gap-2 text-amber-700 text-[10px] font-black uppercase mb-1">
-                  <Info size={14} /> Демо-режим
+                  <Info size={14} /> Временный режим
                 </div>
-                <p className="text-[9px] text-amber-600 leading-tight">Данные не сохранятся. Зайдите в Настройки и нажмите "Загрузить демо", чтобы сохранить их в базу.</p>
+                <p className="text-[10px] text-amber-600 font-medium leading-tight">Данные не в облаке. Зайдите в Настройки и нажмите "Загрузить демо".</p>
               </div>
             )}
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-bold ${mode === 'real' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-              <CloudIcon size={14} /> {mode === 'real' ? 'Облако: Активно' : 'Облако: Не настроено'}
+            
+            <div className="flex flex-col gap-2">
+              <div className={`flex items-center justify-between px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-tighter ${mode === 'real' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                <div className="flex items-center gap-2">
+                  <CloudIcon size={14} /> {mode === 'real' ? 'Облако: Активно' : 'Облако: Оффлайн'}
+                </div>
+                {isSyncing && <RefreshCw size={12} className="animate-spin" />}
+              </div>
+              
+              <button 
+                onClick={() => setIsAuthenticated(false)} 
+                className="flex items-center justify-center gap-2 w-full p-4 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all font-bold text-sm"
+              >
+                <LogOut size={20} /> Выйти
+              </button>
             </div>
-            <button onClick={() => setIsAuthenticated(false)} className="flex items-center gap-3 w-full p-3 text-slate-400 hover:text-red-600 transition-all">
-              <LogOut size={20} /> <span className="font-medium">Выйти</span>
-            </button>
           </div>
         </aside>
 
@@ -172,14 +188,26 @@ const App: React.FC = () => {
   );
 };
 
-const SidebarLink = ({ to, icon, label }: { to: string, icon: React.ReactNode, label: string }) => (
-  <Link 
-    to={to} 
-    className="flex items-center gap-3 p-3 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all duration-200 group"
-  >
-    <span className="group-hover:scale-110 transition-transform">{icon}</span>
-    <span className="font-medium">{label}</span>
-  </Link>
-);
+const SidebarLink = ({ to, icon, label }: { to: string, icon: React.ReactNode, label: string }) => {
+  const location = useLocation();
+  const isActive = location.pathname === to;
+  
+  return (
+    <Link 
+      to={to} 
+      className={`flex items-center justify-between p-4 rounded-2xl transition-all group ${
+        isActive 
+          ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100 scale-[1.02]' 
+          : 'text-slate-500 hover:bg-slate-50 hover:text-indigo-600'
+      }`}
+    >
+      <div className="flex items-center gap-4">
+        <span className={isActive ? '' : 'group-hover:scale-110 transition-transform'}>{icon}</span>
+        <span className="font-bold text-[15px]">{label}</span>
+      </div>
+      {isActive && <ChevronRight size={16} className="opacity-60" />}
+    </Link>
+  );
+};
 
 export default App;

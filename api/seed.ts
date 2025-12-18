@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           start_date: q.startDate,
           end_date: q.endDate
         }));
-        await sql`INSERT INTO quarters ${sql(quarterData, 'id', 'subject_id', 'name', 'start_date', 'end_date')} ON CONFLICT (id) DO NOTHING`;
+        await sql`INSERT INTO quarters ${sql(quarterData, 'id', 'subject_id', 'name', 'start_date', 'end_date')} ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`;
       }
 
       // 4. Ученики
@@ -40,7 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           student_id: s.studentId,
           class_id: s.classId
         }));
-        await sql`INSERT INTO students ${sql(studentData, 'id', 'first_name', 'last_name', 'student_id', 'class_id')} ON CONFLICT (id) DO NOTHING`;
+        await sql`INSERT INTO students ${sql(studentData, 'id', 'first_name', 'last_name', 'student_id', 'class_id')} ON CONFLICT (id) DO UPDATE SET first_name = EXCLUDED.first_name`;
       }
 
       // 5. Уроки
@@ -55,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           homework: l.homework || '',
           max_points: l.maxPoints || 10
         }));
-        await sql`INSERT INTO lessons ${sql(lessonData, 'id', 'subject_id', 'class_id', 'date', 'type', 'topic', 'homework', 'max_points')} ON CONFLICT (id) DO NOTHING`;
+        await sql`INSERT INTO lessons ${sql(lessonData, 'id', 'subject_id', 'class_id', 'date', 'type', 'topic', 'homework', 'max_points')} ON CONFLICT (id) DO UPDATE SET topic = EXCLUDED.topic`;
       }
 
       // 6. Оценки
@@ -64,14 +64,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           id: g.id,
           lesson_id: g.lessonId,
           student_id: g.studentId,
-          points: g.points === undefined ? null : g.points,
+          points: g.points === undefined || g.points === null ? null : Number(g.points),
           attendance: g.attendance || 'Present',
           attendance_note: g.attendanceNote || null,
           comment: g.comment || null
         }));
         
-        for (let i = 0; i < gradeData.length; i += 100) {
-          const chunk = gradeData.slice(i, i + 100);
+        // Вставляем пачками по 50 записей для стабильности
+        for (let i = 0; i < gradeData.length; i += 50) {
+          const chunk = gradeData.slice(i, i + 50);
           await sql`
             INSERT INTO grades ${sql(chunk, 'id', 'lesson_id', 'student_id', 'points', 'attendance', 'attendance_note', 'comment')}
             ON CONFLICT (lesson_id, student_id) DO UPDATE SET
