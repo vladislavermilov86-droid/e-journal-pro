@@ -19,6 +19,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await sql`INSERT INTO subjects ${sql(subjects, 'id', 'name')} ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`;
       }
 
+      // Очищаем уроки, оценки и четверти перед сидированием, если мы хотим "чистый лист"
+      // Это предотвратит конфликты со старыми данными
+      await sql`DELETE FROM grades`;
+      await sql`DELETE FROM lessons`;
+      await sql`DELETE FROM quarters`;
+
       // 3. Четверти
       if (quarters?.length) {
         const quarterData = quarters.map((q: any) => ({
@@ -70,7 +76,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           comment: g.comment || null
         }));
         
-        // Вставляем пачками по 50 записей для стабильности
         for (let i = 0; i < gradeData.length; i += 50) {
           const chunk = gradeData.slice(i, i + 50);
           await sql`

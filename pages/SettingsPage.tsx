@@ -24,7 +24,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [isSeeding, setIsSeeding] = useState(false);
   const [dbInfo, setDbInfo] = useState<{ connected: boolean; message: string }>({ connected: false, message: 'Проверка...' });
 
-  // Формы для новых данных
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newQuarter, setNewQuarter] = useState({
     name: '',
@@ -62,7 +61,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     }
   };
 
-  // Методы управления предметами
   const handleAddSubject = async () => {
     if (!newSubjectName.trim()) return;
     const subject = { id: `subj-${Math.random().toString(36).substr(2, 9)}`, name: newSubjectName };
@@ -78,11 +76,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const handleDeleteSubject = async (id: string) => {
     if (!confirm('Удалить предмет? Это может повлиять на связанные уроки.')) return;
-    // API logic for delete could be expanded here
     setSubjects(prev => prev.filter(s => s.id !== id));
   };
 
-  // Методы управления четвертями
   const handleAddQuarter = async () => {
     if (!newQuarter.name || !newQuarter.subjectId || !newQuarter.startDate || !newQuarter.endDate) {
       alert('Заполните все поля четверти');
@@ -125,7 +121,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   const handleSeedData = async () => {
-    if (!confirm('ВНИМАНИЕ: Все текущие данные в облаке будут заменены на демо-данные с новыми датами (2025 год). Продолжить?')) return;
+    if (!confirm('ВНИМАНИЕ: Все ваши уроки, темы и четверти в облаке будут УДАЛЕНЫ. Список учеников и классы будут ПЕРЕЗАПИСАНЫ. Продолжить очистку?')) return;
     setIsSeeding(true);
     try {
       const res = await fetch('/api/seed', {
@@ -141,11 +137,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         })
       });
       if (res.ok) {
-        alert('Данные успешно сохранены в Neon! Журнал теперь настроен на октябрь-декабрь 2025.');
+        alert('База очищена! Теперь вы можете создать свои четверти и уроки.');
         if (onDataRefresh) await onDataRefresh();
       } else {
         const err = await res.json();
-        alert(`Ошибка при сохранении: ${err.message}`);
+        alert(`Ошибка: ${err.message}`);
       }
     } catch (e) {
       alert('Критическая ошибка при отправке данных');
@@ -200,11 +196,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               <div className="flex flex-col gap-8">
                 <div className="flex items-center gap-6">
                   <div className="bg-emerald-500 p-5 rounded-3xl text-white shadow-xl shadow-emerald-100 group-hover:scale-110 transition-transform"><FileText size={40} /></div>
-                  <h3 className="text-2xl font-black text-slate-800">Шаг 2: Данные</h3>
+                  <h3 className="text-2xl font-black text-slate-800">Шаг 2: Очистка</h3>
                 </div>
                 <button onClick={handleSeedData} disabled={isSeeding || !dbInfo.connected} className={`w-full py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-3 shadow-2xl transition-all ${isSeeding || !dbInfo.connected ? 'bg-slate-100 text-slate-300' : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-100'}`}>
                   {isSeeding ? <RefreshCw className="animate-spin" /> : <FileText size={24} />}
-                  Загрузить демо
+                  Сбросить всё, кроме учеников
                 </button>
               </div>
             </div>
