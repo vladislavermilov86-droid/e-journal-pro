@@ -28,6 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(405).json({ message: 'Method not allowed' });
   } catch (error: any) {
-    return res.status(500).json({ message: error.message });
+    console.error('Classes API Error:', error);
+    return res.status(500).json({ message: error.message, code: error.code });
   }
 }

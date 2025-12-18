@@ -1,24 +1,20 @@
 
 import postgres from 'postgres';
 
-// Пробуем разные варианты переменных, которые может предоставить Vercel/Neon
+// Neon/Vercel обычно предоставляют DATABASE_URL или POSTGRES_URL
 const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
 if (!connectionString) {
-  throw new Error('DATABASE_URL or POSTGRES_URL environment variable is not set');
+  console.error('CRITICAL: Database connection string is missing in environment variables.');
 }
 
-// Добавляем ssl=require если его нет в строке
-const url = new URL(connectionString);
-if (!url.searchParams.has('sslmode')) {
-  url.searchParams.set('sslmode', 'require');
-}
-
-const sql = postgres(url.toString(), {
+const sql = postgres(connectionString || '', {
   ssl: 'require',
-  max: 1,
+  max: 1, // Важно для Serverless функций (одно соединение на вызов)
   idle_timeout: 20,
   connect_timeout: 30,
+  // Дополнительная проверка, если строка подключения пуста
+  onnotice: (notice) => console.log('DB Notice:', notice),
 });
 
 export default sql;

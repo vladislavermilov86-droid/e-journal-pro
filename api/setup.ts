@@ -8,39 +8,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Выполняем SQL для создания структуры
     await sql.begin(async (sql) => {
-      // Пытаемся создать типы, если их нет
+      // 1. Создаем типы (только если их нет)
       await sql`
         DO $$ BEGIN
-          CREATE TYPE attendance_status AS ENUM ('Present', 'Absent', 'Excused');
-        EXCEPTION
-          WHEN duplicate_object THEN null;
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attendance_status') THEN
+            CREATE TYPE attendance_status AS ENUM ('Present', 'Absent', 'Excused');
+          END IF;
+          
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'lesson_type') THEN
+            CREATE TYPE lesson_type AS ENUM ('Урок', 'СОР', 'СОЧ', 'Проект', 'Экзамен', 'Тест', 'Классная работа', 'Домашняя работа', 'Самостоятельная работа', 'Практическая работа');
+          END IF;
         END $$;
       `;
+
+      // 2. Создаем таблицы по порядку
+      await sql`CREATE TABLE IF NOT EXISTS classes (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE)`;
+      await sql`CREATE TABLE IF NOT EXISTS subjects (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE)`;
       
-      await sql`
-        DO $$ BEGIN
-          CREATE TYPE lesson_type AS ENUM ('Урок', 'СОР', 'СОЧ', 'Проект', 'Экзамен', 'Тест', 'Классная работа', 'Домашняя работа', 'Самостоятельная работа', 'Практическая работа');
-        EXCEPTION
-          WHEN duplicate_object THEN null;
-        END $$;
-      `;
-
-      await sql`
-        CREATE TABLE IF NOT EXISTS classes (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL UNIQUE
-        )
-      `;
-
-      await sql`
-        CREATE TABLE IF NOT EXISTS subjects (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL UNIQUE
-        )
-      `;
-
       await sql`
         CREATE TABLE IF NOT EXISTS students (
           id TEXT PRIMARY KEY,
@@ -97,9 +82,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
     });
 
-    return res.status(200).json({ success: true, message: 'База данных успешно инициализирована' });
+    return res.status(200).json({ success: true, message: 'Database schema initialized successfully' });
   } catch (error: any) {
-    console.error('Setup Error:', error);
-    return res.status(500).json({ message: error.message });
+    console.error('Setup Error Details:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to initialize database', 
+      error: error.message,
+      detail: error.detail || 'No extra details'
+    });
   }
 }
