@@ -1,6 +1,6 @@
 
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import sql from './db';
+import sql from './db.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
