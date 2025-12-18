@@ -8,6 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const quarters = await sql`
         SELECT id, subject_id as "subjectId", name, start_date::text as "startDate", end_date::text as "endDate"
         FROM quarters
+        ORDER BY start_date ASC
       `;
       return res.status(200).json(quarters);
     }
@@ -25,6 +26,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         RETURNING id, subject_id as "subjectId", name, start_date::text as "startDate", end_date::text as "endDate"
       `;
       return res.status(200).json(quarter);
+    }
+
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      if (id) {
+        await sql`DELETE FROM quarters WHERE id = ${id as string}`;
+        return res.status(200).json({ success: true });
+      }
+      return res.status(400).json({ message: 'Missing id' });
     }
 
     return res.status(405).json({ message: 'Method not allowed' });

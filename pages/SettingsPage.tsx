@@ -48,12 +48,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     } catch (e) { setDbInfo({ connected: false, message: 'Нет связи с сервером' }); }
   };
 
-  const apiCall = async (endpoint: string, method: string, body: any) => {
+  const apiCall = async (endpoint: string, method: string, body?: any, query?: string) => {
     try {
-      const res = await fetch(`/api/${endpoint}`, {
+      const url = query ? `/api/${endpoint}?${query}` : `/api/${endpoint}`;
+      const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: body ? JSON.stringify(body) : undefined
       });
       return res.ok;
     } catch (e) {
@@ -66,15 +67,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     if (!newSubjectName.trim()) return;
     const subject = { id: `subj-${Math.random().toString(36).substr(2, 9)}`, name: newSubjectName };
     const success = await apiCall('subjects', 'POST', subject);
-    if (success || !dbInfo.connected) {
-      setSubjects(prev => [...prev, subject]);
+    if (success) {
+      if (onDataRefresh) await onDataRefresh();
       setNewSubjectName('');
+    } else if (!dbInfo.connected) {
+       setSubjects(prev => [...prev, subject]);
+       setNewSubjectName('');
     }
   };
 
   const handleDeleteSubject = async (id: string) => {
     if (!confirm('Удалить предмет? Это может повлиять на связанные уроки.')) return;
-    // API не имеет явного DELETE для предметов в предоставленном коде, но мы можем имитировать или расширить
     setSubjects(prev => prev.filter(s => s.id !== id));
   };
 
@@ -89,7 +92,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       id: `qtr-${Math.random().toString(36).substr(2, 9)}`
     };
     const success = await apiCall('quarters', 'POST', quarter);
-    if (success || !dbInfo.connected) {
+    if (success) {
+      if (onDataRefresh) await onDataRefresh();
+      setNewQuarter({ ...newQuarter, name: '', startDate: '', endDate: '' });
+    } else if (!dbInfo.connected) {
       setQuarters(prev => [...prev, quarter]);
       setNewQuarter({ ...newQuarter, name: '', startDate: '', endDate: '' });
     }
@@ -97,7 +103,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const handleDeleteQuarter = async (id: string) => {
     if (!confirm('Удалить четверть?')) return;
-    setQuarters(prev => prev.filter(q => q.id !== id));
+    const success = await apiCall('quarters', 'DELETE', undefined, `id=${id}`);
+    if (success) {
+      if (onDataRefresh) await onDataRefresh();
+    } else {
+      setQuarters(prev => prev.filter(q => q.id !== id));
+    }
   };
 
   const handleInitDB = async () => {
@@ -113,8 +124,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   const handleSeedData = async () => {
-    if (!confirm('Вы собираетесь отправить все демонстрационные данные в облако. Это создаст постоянную копию журнала. Продолжить?')) return;
-    
+    if (!confirm('Вы собираетесь отправить все демонстрационные данные в облако. Продолжить?')) return;
     setIsSeeding(true);
     try {
       const res = await fetch('/api/seed', {
@@ -129,7 +139,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
           grades: initialGrades
         })
       });
-
       if (res.ok) {
         alert('Данные успешно сохранены в Neon!');
         if (onDataRefresh) await onDataRefresh();
@@ -165,7 +174,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 <div>
                   <h2 className="text-3xl font-black text-slate-800">Статус Облака</h2>
                   <p className={`text-lg font-bold mt-1 ${dbInfo.connected ? 'text-emerald-600' : 'text-red-500'}`}>{dbInfo.message}</p>
-                  <p className="text-slate-400 text-sm mt-2 max-w-lg">Если статус красный — ваш журнал работает во временном режиме.</p>
                 </div>
                 <button onClick={checkConnection} className="md:ml-auto p-5 bg-slate-100 rounded-3xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
                   <RefreshCw size={24} />
@@ -178,16 +186,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               <div className="flex flex-col gap-8">
                 <div className="flex items-center gap-6">
                   <div className="bg-indigo-600 p-5 rounded-3xl text-white shadow-xl shadow-indigo-100 group-hover:scale-110 transition-transform"><Zap size={40} /></div>
-                  <div>
-                    <h3 className="text-2xl font-black text-slate-800">Шаг 1: Схема</h3>
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Подготовка таблиц</p>
-                  </div>
+                  <h3 className="text-2xl font-black text-slate-800">Шаг 1: Схема</h3>
                 </div>
-                <button 
-                  onClick={handleInitDB} 
-                  disabled={isInitializing} 
-                  className="w-full py-6 bg-indigo-600 text-white rounded-[2rem] font-black text-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 shadow-2xl shadow-indigo-100"
-                >
+                <button onClick={handleInitDB} disabled={isInitializing} className="w-full py-6 bg-indigo-600 text-white rounded-[2rem] font-black text-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-3">
                   {isInitializing ? <RefreshCw className="animate-spin" /> : <Zap size={24} />}
                   Настроить базу
                 </button>
@@ -198,18 +199,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               <div className="flex flex-col gap-8">
                 <div className="flex items-center gap-6">
                   <div className="bg-emerald-500 p-5 rounded-3xl text-white shadow-xl shadow-emerald-100 group-hover:scale-110 transition-transform"><FileText size={40} /></div>
-                  <div>
-                    <h3 className="text-2xl font-black text-slate-800">Шаг 2: Данные</h3>
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Первичный импорт</p>
-                  </div>
+                  <h3 className="text-2xl font-black text-slate-800">Шаг 2: Данные</h3>
                 </div>
-                <button 
-                  onClick={handleSeedData} 
-                  disabled={isSeeding || !dbInfo.connected} 
-                  className={`w-full py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-3 shadow-2xl transition-all ${
-                    isSeeding || !dbInfo.connected ? 'bg-slate-100 text-slate-300' : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-100'
-                  }`}
-                >
+                <button onClick={handleSeedData} disabled={isSeeding || !dbInfo.connected} className={`w-full py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-3 shadow-2xl transition-all ${isSeeding || !dbInfo.connected ? 'bg-slate-100 text-slate-300' : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-100'}`}>
                   {isSeeding ? <RefreshCw className="animate-spin" /> : <FileText size={24} />}
                   Загрузить демо
                 </button>
@@ -219,105 +211,53 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in duration-300">
-          {/* Управление предметами */}
           <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 flex flex-col">
             <div className="flex items-center gap-4 mb-8">
-              <div className="bg-indigo-600 p-3 rounded-2xl text-white">
-                <Book size={24} />
-              </div>
+              <div className="bg-indigo-600 p-3 rounded-2xl text-white"><Book size={24} /></div>
               <h3 className="text-2xl font-black text-slate-800">Предметы</h3>
             </div>
-
             <div className="flex gap-2 mb-6">
-              <input 
-                type="text"
-                placeholder="Название предмета..."
-                value={newSubjectName}
-                onChange={(e) => setNewSubjectName(e.target.value)}
-                className="flex-1 px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <button 
-                onClick={handleAddSubject}
-                className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all"
-              >
-                <Plus size={24} />
-              </button>
+              <input type="text" placeholder="Название предмета..." value={newSubjectName} onChange={(e) => setNewSubjectName(e.target.value)} className="flex-1 px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500" />
+              <button onClick={handleAddSubject} className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all"><Plus size={24} /></button>
             </div>
-
             <div className="space-y-3 overflow-y-auto max-h-[400px] pr-2">
               {subjects.map(s => (
                 <div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl group">
                   <span className="font-bold text-slate-700">{s.name}</span>
-                  <button 
-                    onClick={() => handleDeleteSubject(s.id)}
-                    className="opacity-0 group-hover:opacity-100 p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  <button onClick={() => handleDeleteSubject(s.id)} className="opacity-0 group-hover:opacity-100 p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
                 </div>
               ))}
-              {subjects.length === 0 && <p className="text-center text-slate-400 py-4">Предметы не созданы</p>}
             </div>
           </div>
 
-          {/* Управление четвертями */}
           <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 flex flex-col">
             <div className="flex items-center gap-4 mb-8">
-              <div className="bg-emerald-500 p-3 rounded-2xl text-white">
-                <Calendar size={24} />
-              </div>
+              <div className="bg-emerald-500 p-3 rounded-2xl text-white"><Calendar size={24} /></div>
               <h3 className="text-2xl font-black text-slate-800">Четверти</h3>
             </div>
-
             <div className="space-y-4 mb-8 bg-slate-50 p-6 rounded-3xl border border-slate-100">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Название четверти</label>
-                  <input 
-                    type="text" 
-                    placeholder="Напр: 3 Четверть"
-                    value={newQuarter.name}
-                    onChange={(e) => setNewQuarter({...newQuarter, name: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none"
-                  />
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Название</label>
+                  <input type="text" placeholder="Напр: 3 Четверть" value={newQuarter.name} onChange={(e) => setNewQuarter({...newQuarter, name: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none" />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Предмет</label>
-                  <select 
-                    value={newQuarter.subjectId}
-                    onChange={(e) => setNewQuarter({...newQuarter, subjectId: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none bg-white"
-                  >
+                  <select value={newQuarter.subjectId} onChange={(e) => setNewQuarter({...newQuarter, subjectId: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none bg-white">
                     {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Начало</label>
-                  <input 
-                    type="date" 
-                    value={newQuarter.startDate}
-                    onChange={(e) => setNewQuarter({...newQuarter, startDate: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none"
-                  />
+                  <input type="date" value={newQuarter.startDate} onChange={(e) => setNewQuarter({...newQuarter, startDate: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Конец</label>
-                  <input 
-                    type="date" 
-                    value={newQuarter.endDate}
-                    onChange={(e) => setNewQuarter({...newQuarter, endDate: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none"
-                  />
+                  <input type="date" value={newQuarter.endDate} onChange={(e) => setNewQuarter({...newQuarter, endDate: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none" />
                 </div>
               </div>
-              <button 
-                onClick={handleAddQuarter}
-                className="w-full py-3 bg-emerald-500 text-white rounded-2xl font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-2"
-              >
-                <Plus size={20} /> Добавить четверть
-              </button>
+              <button onClick={handleAddQuarter} className="w-full py-3 bg-emerald-500 text-white rounded-2xl font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-2"><Plus size={20} /> Добавить четверть</button>
             </div>
-
             <div className="space-y-3 overflow-y-auto max-h-[300px] pr-2">
               {quarters.map(q => {
                 const subject = subjects.find(s => s.id === q.subjectId);
@@ -333,17 +273,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                           {new Date(q.startDate).toLocaleDateString('ru-RU')} — {new Date(q.endDate).toLocaleDateString('ru-RU')}
                         </p>
                       </div>
-                      <button 
-                        onClick={() => handleDeleteQuarter(q.id)}
-                        className="opacity-0 group-hover:opacity-100 p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <button onClick={() => handleDeleteQuarter(q.id)} className="opacity-0 group-hover:opacity-100 p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={16} /></button>
                     </div>
                   </div>
                 );
               })}
-              {quarters.length === 0 && <p className="text-center text-slate-400 py-4">Четверти не настроены</p>}
             </div>
           </div>
         </div>
