@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { 
   Users, BookOpen, Calendar, Mail, Settings, LogOut, 
-  BarChart2, CloudIcon, RefreshCw, AlertTriangle
+  BarChart2, CloudIcon, RefreshCw, AlertTriangle, Database
 } from 'lucide-react';
 import { 
   Class, Student, Subject, Lesson, GradeCell, Message, 
@@ -30,7 +30,6 @@ const apiRequest = async (endpoint: string, method: string = 'GET', body?: any) 
     });
     
     if (!response.ok) {
-      // Специальная обработка для случая, когда таблицы не созданы
       if (response.status === 500) {
         console.warn(`API ${endpoint} вернул 500. Возможно, база данных не инициализирована.`);
       }
@@ -49,6 +48,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [dbError, setDbError] = useState<boolean>(false);
+  const [isDbEmpty, setIsDbEmpty] = useState<boolean>(false);
   
   const [classes, setClasses] = useState<Class[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -78,24 +78,40 @@ const App: React.FC = () => {
         apiRequest('quarters')
       ]);
 
-      // Если хотя бы один запрос вернул null, значит БД скорее всего не настроена
-      if (remoteClasses === null) setDbError(true);
-      else setDbError(false);
-
-      setClasses(remoteClasses || initialClasses);
-      setStudents(remoteStudents || initialStudents);
-      setSubjects(remoteSubjects || initialSubjects);
-      setLessons(remoteLessons || initialLessons);
-      setGrades(remoteGrades || initialGrades);
-      setQuarters(remoteQuarters || initialQuarters);
+      if (remoteClasses === null) {
+        setDbError(true);
+        // Если ошибка — показываем mock-данные
+        setClasses(initialClasses);
+        setStudents(initialStudents);
+        setSubjects(initialSubjects);
+        setLessons(initialLessons);
+        setGrades(initialGrades);
+        setQuarters(initialQuarters);
+      } else {
+        setDbError(false);
+        // Если база пустая (remoteClasses.length === 0)
+        if (remoteClasses.length === 0) {
+          setIsDbEmpty(true);
+          // Если в БД ничего нет, показываем начальные данные (локально)
+          setClasses(initialClasses);
+          setStudents(initialStudents);
+          setSubjects(initialSubjects);
+          setLessons(initialLessons);
+          setGrades(initialGrades);
+          setQuarters(initialQuarters);
+        } else {
+          setIsDbEmpty(false);
+          setClasses(remoteClasses);
+          setStudents(remoteStudents || []);
+          setSubjects(remoteSubjects || []);
+          setLessons(remoteLessons || []);
+          setGrades(remoteGrades || []);
+          setQuarters(remoteQuarters || []);
+        }
+      }
     } catch (e) {
       setDbError(true);
       setClasses(initialClasses);
-      setStudents(initialStudents);
-      setSubjects(initialSubjects);
-      setLessons(initialLessons);
-      setGrades(initialGrades);
-      setQuarters(initialQuarters);
     } finally {
       setIsSyncing(false);
       setIsLoading(false);
@@ -193,6 +209,12 @@ const App: React.FC = () => {
             БД не настроена! Исправить
           </Link>
         )}
+        {isDbEmpty && !dbError && (
+          <Link to="/settings" className="flex items-center gap-2 p-3 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-tighter">
+            <Database size={14} />
+            БД пуста. Загрузить демо?
+          </Link>
+        )}
         <button 
           onClick={loadAllData}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all w-full ${isSyncing ? 'text-amber-600 bg-amber-50 cursor-wait' : dbError ? 'text-red-600 bg-red-50' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'}`}
@@ -281,6 +303,7 @@ const App: React.FC = () => {
                 setSubjects={setSubjects}
                 quarters={quarters}
                 setQuarters={setQuarters}
+                onDataRefresh={loadAllData}
               />
             } />
             <Route path="*" element={<Navigate to="/journal" replace />} />

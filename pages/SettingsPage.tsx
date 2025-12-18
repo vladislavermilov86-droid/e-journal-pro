@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Subject, Class, Quarter } from '../types';
-import { Plus, Trash2, Database, Code, Zap, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Database, Code, Zap, CheckCircle, AlertCircle, RefreshCw, FileText } from 'lucide-react';
+import { initialClasses, initialStudents, initialSubjects, initialLessons, initialGrades, initialQuarters } from '../mockData';
 
 interface SettingsPageProps {
   classes: Class[];
@@ -9,13 +10,14 @@ interface SettingsPageProps {
   setSubjects: React.Dispatch<React.SetStateAction<Subject[]>>;
   quarters: Quarter[];
   setQuarters: React.Dispatch<React.SetStateAction<Quarter[]>>;
+  onDataRefresh?: () => Promise<void>;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ classes, subjects, setSubjects, quarters, setQuarters }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ classes, subjects, setSubjects, quarters, setQuarters, onDataRefresh }) => {
   const [newSubjectName, setNewSubjectName] = useState('');
   const [activeTab, setActiveTab] = useState<'general' | 'sql'>('general');
   const [isInitializing, setIsInitializing] = useState(false);
-  const [initStatus, setInitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isSeeding, setIsSeeding] = useState(false);
   const [dbInfo, setDbInfo] = useState<{ connected: boolean; message: string }>({ connected: false, message: 'Проверка...' });
   const [newQuarter, setNewQuarter] = useState({ name: '', subjectId: subjects[0]?.id || '', startDate: '', endDate: '' });
 
@@ -41,33 +43,61 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ classes, subjects, setSubje
     if (!confirm('Это создаст необходимые таблицы в Neon. Продолжить?')) return;
     
     setIsInitializing(true);
-    setInitStatus('idle');
     try {
       const response = await fetch('/api/setup', { method: 'POST' });
       const data = await response.json();
       
       if (response.ok) {
-        setInitStatus('success');
         await checkConnection();
         alert('База данных успешно настроена!');
       } else {
-        setInitStatus('error');
         alert(`Ошибка инициализации: ${data.message}\n\nДетали: ${data.error || 'не указаны'}`);
       }
     } catch (e) {
-      setInitStatus('error');
       alert('Не удалось выполнить запрос к API Setup');
     } finally {
       setIsInitializing(false);
     }
   };
 
-  const sqlCode = `-- Таблицы для Neon DB
--- Выполните этот код в консоли SQL на neon.tech, если кнопка "Настроить" не срабатывает
+  const handleSeedData = async () => {
+    if (!confirm('Это загрузит демонстрационные данные (9В класс, оценки за 1-2 четверть) в вашу базу данных. Это может занять некоторое время. Продолжить?')) return;
+    
+    setIsSeeding(true);
+    try {
+      const apiRequest = async (endpoint: string, body: any) => {
+        return fetch(`/api/${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      };
 
-CREATE TABLE IF NOT EXISTS subjects (id TEXT PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE);
-CREATE TABLE IF NOT EXISTS classes (id TEXT PRIMARY KEY, name VARCHAR(20) NOT NULL UNIQUE);
--- ... (остальные таблицы создаются через api/setup)`;
+      // Последовательно загружаем всё
+      for (const c of initialClasses) await apiRequest('classes', c);
+      for (const s of initialSubjects) await apiRequest('subjects', s);
+      for (const q of initialQuarters) await apiRequest('quarters', q);
+      for (const st of initialStudents) await apiRequest('students', st);
+      for (const l of initialLessons) await apiRequest('lessons', l);
+      
+      // Оценки загружаем пачками для скорости
+      const chunks = [];
+      for (let i = 0; i < initialGrades.length; i += 10) {
+        chunks.push(initialGrades.slice(i, i + 10));
+      }
+      for (const chunk of chunks) {
+        await Promise.all(chunk.map(g => apiRequest('grades', g)));
+      }
+
+      alert('Демо-данные успешно импортированы!');
+      if (onDataRefresh) await onDataRefresh();
+    } catch (e) {
+      console.error(e);
+      alert('Ошибка при импорте данных. Проверьте консоль.');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   const handleAddSubject = () => {
     if (!newSubjectName.trim()) return;
@@ -190,43 +220,59 @@ CREATE TABLE IF NOT EXISTS classes (id TEXT PRIMARY KEY, name VARCHAR(20) NOT NU
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-4 border-indigo-500/20">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-indigo-600 p-4 rounded-3xl text-white">
-                  <Zap size={32} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-4 border-indigo-500/20">
+              <div className="flex flex-col items-start gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="bg-indigo-600 p-4 rounded-3xl text-white">
+                    <Zap size={32} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-800">Настройка таблиц</h2>
+                    <p className="text-slate-500 text-xs font-medium">Создать структуру в базе Neon</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-black text-slate-800">Первичная настройка</h2>
-                  <p className="text-slate-500 font-medium">Создать таблицы в базе Neon</p>
-                </div>
+                <button 
+                  onClick={handleInitDB}
+                  disabled={isInitializing}
+                  className={`w-full py-4 rounded-[1.5rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl ${
+                    isInitializing ? 'bg-slate-200 text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  }`}
+                >
+                  {isInitializing ? <RefreshCw className="animate-spin" size={20} /> : <Zap size={20} />}
+                  Настроить базу
+                </button>
               </div>
-              <button 
-                onClick={handleInitDB}
-                disabled={isInitializing}
-                className={`px-10 py-5 rounded-[2rem] font-black text-lg transition-all flex items-center gap-3 shadow-2xl ${
-                  isInitializing ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-indigo-200'
-                }`}
-              >
-                {isInitializing ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                    Настройка...
-                  </>
-                ) : (
-                  <>
-                    <Zap size={22} />
-                    Настроить базу данных
-                  </>
-                )}
-              </button>
             </div>
-            
-            <p className="mt-6 text-sm text-slate-500 bg-slate-50 p-4 rounded-2xl">
-              <b>Важно:</b> Перед нажатием убедитесь, что в Vercel прописана переменная <code>DATABASE_URL</code>. 
-              Если таблицы уже созданы, повторное нажатие не удалит данные.
-            </p>
+
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
+              <div className="flex flex-col items-start gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="bg-emerald-500 p-4 rounded-3xl text-white">
+                    <FileText size={32} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-800">Демо-данные</h2>
+                    <p className="text-slate-500 text-xs font-medium">Импорт примера (9В класс)</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={handleSeedData}
+                  disabled={isSeeding || !dbInfo.connected}
+                  className={`w-full py-4 rounded-[1.5rem] font-black transition-all flex items-center justify-center gap-3 shadow-xl ${
+                    isSeeding || !dbInfo.connected ? 'bg-slate-100 text-slate-300' : 'bg-emerald-500 text-white hover:bg-emerald-600'
+                  }`}
+                >
+                  {isSeeding ? <RefreshCw className="animate-spin" size={20} /> : <FileText size={20} />}
+                  Загрузить демо
+                </button>
+              </div>
+            </div>
           </div>
+          
+          <p className="text-sm text-slate-500 bg-slate-50 p-4 rounded-2xl text-center">
+            <b>Важно:</b> Сначала нажмите "Настроить базу", а затем, если хотите увидеть готовый пример, нажмите "Загрузить демо".
+          </p>
         </div>
       )}
     </div>
