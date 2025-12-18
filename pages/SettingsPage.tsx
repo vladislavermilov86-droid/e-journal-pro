@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Subject, Class, Quarter } from '../types';
-import { Plus, Trash2, Database, Code } from 'lucide-react';
+import { Plus, Trash2, Database, Code, Zap, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface SettingsPageProps {
   classes: Class[];
@@ -14,17 +14,43 @@ interface SettingsPageProps {
 const SettingsPage: React.FC<SettingsPageProps> = ({ classes, subjects, setSubjects, quarters, setQuarters }) => {
   const [newSubjectName, setNewSubjectName] = useState('');
   const [activeTab, setActiveTab] = useState<'general' | 'sql'>('general');
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [initStatus, setInitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [newQuarter, setNewQuarter] = useState({ name: '', subjectId: subjects[0]?.id || '', startDate: '', endDate: '' });
+
+  const handleInitDB = async () => {
+    if (!confirm('Это создаст необходимые таблицы в Neon. Продолжить?')) return;
+    
+    setIsInitializing(true);
+    setInitStatus('idle');
+    try {
+      const response = await fetch('/api/setup', { method: 'POST' });
+      if (response.ok) {
+        setInitStatus('success');
+        alert('База данных готова к работе!');
+      } else {
+        setInitStatus('error');
+        const err = await response.json();
+        alert(`Ошибка: ${err.message}`);
+      }
+    } catch (e) {
+      setInitStatus('error');
+      alert('Не удалось связаться с сервером');
+    } finally {
+      setIsInitializing(false);
+    }
+  };
 
   const sqlCode = `-- Таблицы для Neon DB
 CREATE TYPE attendance_status AS ENUM ('Present', 'Absent', 'Excused');
 CREATE TYPE lesson_type AS ENUM ('Урок', 'СОР', 'СОЧ', 'Проект', 'Экзамен', 'Тест', 'Классная работа', 'Домашняя работа', 'Самостоятельная работа', 'Практическая работа');
 
-CREATE TABLE subjects (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(100) NOT NULL UNIQUE);
-CREATE TABLE classes (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(20) NOT NULL UNIQUE);
-CREATE TABLE students (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), first_name VARCHAR(100) NOT NULL, last_name VARCHAR(100) NOT NULL, student_id VARCHAR(50) UNIQUE, class_id UUID REFERENCES classes(id) ON DELETE CASCADE);
-CREATE TABLE lessons (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), subject_id UUID REFERENCES subjects(id), class_id UUID REFERENCES classes(id), date DATE NOT NULL, type lesson_type DEFAULT 'Урок', topic TEXT, homework TEXT, max_points INTEGER DEFAULT 10);
-CREATE TABLE grades (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), lesson_id UUID REFERENCES lessons(id) ON DELETE CASCADE, student_id UUID REFERENCES students(id) ON DELETE CASCADE, points INTEGER, attendance attendance_status DEFAULT 'Present', attendance_note TEXT, comment TEXT, UNIQUE(lesson_id, student_id));`;
+CREATE TABLE subjects (id TEXT PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE);
+CREATE TABLE classes (id TEXT PRIMARY KEY, name VARCHAR(20) NOT NULL UNIQUE);
+CREATE TABLE students (id TEXT PRIMARY KEY, first_name VARCHAR(100) NOT NULL, last_name VARCHAR(100) NOT NULL, student_id VARCHAR(50) UNIQUE, class_id TEXT REFERENCES classes(id) ON DELETE CASCADE);
+CREATE TABLE lessons (id TEXT PRIMARY KEY, subject_id TEXT REFERENCES subjects(id), class_id TEXT REFERENCES classes(id), date DATE NOT NULL, type lesson_type DEFAULT 'Урок', topic TEXT, homework TEXT, max_points INTEGER DEFAULT 10);
+CREATE TABLE grades (id TEXT PRIMARY KEY, lesson_id TEXT REFERENCES lessons(id) ON DELETE CASCADE, student_id TEXT REFERENCES students(id) ON DELETE CASCADE, points INTEGER, attendance attendance_status DEFAULT 'Present', attendance_note TEXT, comment TEXT, UNIQUE(lesson_id, student_id));
+CREATE TABLE boards (id TEXT PRIMARY KEY, name TEXT NOT NULL, data TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`;
 
   const handleAddSubject = () => {
     if (!newSubjectName.trim()) return;
@@ -51,7 +77,7 @@ CREATE TABLE grades (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), lesson_id UU
           onClick={() => setActiveTab('sql')}
           className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeTab === 'sql' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
         >
-          <Code size={16} /> SQL Дамп
+          <Code size={16} /> SQL Дамп / Настройка
         </button>
       </div>
 
@@ -124,28 +150,74 @@ CREATE TABLE grades (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), lesson_id UU
           </div>
         </div>
       ) : (
-        <div className="bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Code size={20} className="text-indigo-400" /> Базовая структура БД
-            </h2>
-            <button 
-              onClick={() => {
-                navigator.clipboard.writeText(sqlCode);
-                alert('SQL скопирован в буфер обмена');
-              }}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all"
-            >
-              Копировать код
-            </button>
+        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-4 border-indigo-500/20">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-indigo-600 p-4 rounded-3xl text-white">
+                  <Zap size={32} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-slate-800">Быстрая настройка Neon</h2>
+                  <p className="text-slate-500 font-medium">Создать все таблицы одним нажатием</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleInitDB}
+                disabled={isInitializing}
+                className={`px-10 py-5 rounded-[2rem] font-black text-lg transition-all flex items-center gap-3 shadow-2xl ${
+                  isInitializing ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-indigo-200'
+                }`}
+              >
+                {isInitializing ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                    Настройка...
+                  </>
+                ) : (
+                  <>
+                    <Zap size={22} />
+                    Настроить базу данных в Neon
+                  </>
+                )}
+              </button>
+            </div>
+            
+            {initStatus === 'success' && (
+               <div className="mt-6 p-4 bg-emerald-50 text-emerald-700 rounded-2xl flex items-center gap-3 font-bold border border-emerald-100">
+                 <CheckCircle size={20} /> Таблицы созданы! Приложение готово к работе.
+               </div>
+            )}
+            {initStatus === 'error' && (
+               <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-2xl flex items-center gap-3 font-bold border border-red-100">
+                 <AlertCircle size={20} /> Ошибка при создании таблиц. Проверьте DATABASE_URL.
+               </div>
+            )}
           </div>
-          <pre className="text-indigo-300 font-mono text-sm leading-relaxed overflow-x-auto p-6 bg-black/30 rounded-2xl border border-white/10">
-            {sqlCode}
-          </pre>
-          <div className="mt-6 p-4 bg-indigo-900/40 rounded-xl border border-indigo-500/30">
-            <p className="text-xs text-indigo-100 font-medium">
-              💡 Используйте этот код в консоли <b>Neon Tech</b> для создания таблиц. После создания таблиц ваше приложение сможет выполнять реальные SQL-запросы через API.
-            </p>
+
+          <div className="bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Code size={20} className="text-indigo-400" /> SQL Дамп (для ручного ввода)
+              </h2>
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(sqlCode);
+                  alert('SQL скопирован в буфер обмена');
+                }}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all"
+              >
+                Копировать код
+              </button>
+            </div>
+            <pre className="text-indigo-300 font-mono text-sm leading-relaxed overflow-x-auto p-6 bg-black/30 rounded-2xl border border-white/10">
+              {sqlCode}
+            </pre>
+            <div className="mt-6 p-4 bg-indigo-900/40 rounded-xl border border-indigo-500/30">
+              <p className="text-xs text-indigo-100 font-medium">
+                💡 Если кнопка автоматической настройки не сработала, скопируйте этот код и выполните его в разделе <b>SQL Editor</b> консоли Neon Tech.
+              </p>
+            </div>
           </div>
         </div>
       )}
