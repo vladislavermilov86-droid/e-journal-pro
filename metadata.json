@@ -1,0 +1,7 @@
+{
+  "name": "E-Journal Pro",
+  "description": "A sophisticated single-teacher electronic gradebook featuring lesson scheduling, advanced grading logic (formative/summative), and student messaging.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
