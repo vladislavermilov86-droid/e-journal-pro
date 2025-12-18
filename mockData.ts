@@ -56,6 +56,7 @@ export const initialQuarters: Quarter[] = [
 ];
 
 export const initialLessons: Lesson[] = [
+  // 1 Четверть (09.10 - 03.11)
   { id: 'l1', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-10-09', type: LessonType.NORMAL, topic: 'Метод интервалов', homework: 'Д/З: Повторить прошлые темы', maxPoints: 10 },
   { id: 'l2', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-10-12', type: LessonType.NORMAL, topic: 'Метод интервалов (Часть 2)', homework: 'Д/З: Стр 36, №71 (2,3,4)', maxPoints: 10 },
   { id: 'l3', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-10-14', type: LessonType.NORMAL, topic: 'Область определения функции', homework: 'Д/З: стр 36, № 73 (2,3,4,6)', maxPoints: 10 },
@@ -63,9 +64,11 @@ export const initialLessons: Lesson[] = [
   { id: 'l5', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-10-21', type: LessonType.NORMAL, topic: 'Четность и нечетность функции', homework: 'Д/З: Просмотреть тему', maxPoints: 10 },
   { id: 'l6', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-10-23', type: LessonType.NORMAL, topic: 'Неравенства и уравнения, содержащие степень', homework: 'Д/З: Стр 49, №101', maxPoints: 10 },
   { id: 'l7', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-10-26', type: LessonType.NORMAL, topic: 'Подготовка к СОР', homework: 'Д/З:', maxPoints: 10 },
-  { id: 'l8', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-10-28', type: LessonType.SOR, topic: 'СОР', homework: 'Д/З: Подготовка к СОР', maxPoints: 50 },
-  { id: 'l9', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-11-03', type: LessonType.SOCH, topic: 'СОЧ', homework: 'Д/З: Повторение', maxPoints: 40 },
-  { id: 'l10', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-11-23', type: LessonType.NORMAL, topic: 'Четверть 2/Подготовка к СОР 1', homework: 'Д/З: Повторить решения', maxPoints: 10 },
+  { id: 'l8', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-10-28', type: LessonType.SOR, topic: 'СОР 1', homework: 'Д/З: Подготовка к СОР', maxPoints: 25 },
+  { id: 'l9', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-11-03', type: LessonType.SOCH, topic: 'СОЧ 1', homework: 'Д/З: Повторение', maxPoints: 40 },
+  
+  // 2 Четверть (23.11 - 27.12)
+  { id: 'l10', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-11-23', type: LessonType.NORMAL, topic: 'Четверть 2 / Введение', homework: 'Д/З: Повторить решения', maxPoints: 10 },
   { id: 'l11', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-11-24', type: LessonType.SOR, topic: 'СОР 2', homework: 'Д/З: Решать задачи', maxPoints: 25 },
   { id: 'l12', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-12-14', type: LessonType.NORMAL, topic: 'Теорема Виета', homework: 'Д/З: Дискриминант', maxPoints: 10 },
   { id: 'l13', subjectId: ALG_ID, classId: CLASS_9V_ID, date: '2025-12-16', type: LessonType.NORMAL, topic: 'Поворот точки', homework: 'Д/З: Уравнения', maxPoints: 10 },
@@ -85,7 +88,20 @@ const createGrade = (lessonId: string, studentId: string, val: number | 'H' | 'P
 };
 
 export const initialGrades: GradeCell[] = [
-  createGrade('l1', 's1', 7), createGrade('l1', 's3', 10), createGrade('l1', 's5', 10),
-  createGrade('l8', 's3', 50), createGrade('l9', 's3', 40),
-  createGrade('l11', 's3', 25), createGrade('l14', 's3', 38)
+  // Оценки для Владислава Ермилова (s3)
+  createGrade('l1', 's3', 10),
+  createGrade('l2', 's3', 9),
+  createGrade('l3', 's3', 10),
+  createGrade('l4', 's3', 8),
+  createGrade('l8', 's3', 22),
+  createGrade('l9', 's3', 36),
+  
+  createGrade('l10', 's3', 10),
+  createGrade('l11', 's3', 25),
+  createGrade('l14', 's3', 38),
+
+  // Оценки для Самиры (s1)
+  createGrade('l1', 's1', 7),
+  createGrade('l8', 's1', 15),
+  createGrade('l9', 's1', 25),
 ];

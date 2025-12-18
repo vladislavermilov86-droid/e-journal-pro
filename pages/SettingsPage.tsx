@@ -78,6 +78,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const handleDeleteSubject = async (id: string) => {
     if (!confirm('Удалить предмет? Это может повлиять на связанные уроки.')) return;
+    // API logic for delete could be expanded here
     setSubjects(prev => prev.filter(s => s.id !== id));
   };
 
@@ -124,7 +125,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   const handleSeedData = async () => {
-    if (!confirm('Вы собираетесь отправить все демонстрационные данные в облако. Продолжить?')) return;
+    if (!confirm('ВНИМАНИЕ: Все текущие данные в облаке будут заменены на демо-данные с новыми датами (2025 год). Продолжить?')) return;
     setIsSeeding(true);
     try {
       const res = await fetch('/api/seed', {
@@ -140,7 +141,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         })
       });
       if (res.ok) {
-        alert('Данные успешно сохранены в Neon!');
+        alert('Данные успешно сохранены в Neon! Журнал теперь настроен на октябрь-декабрь 2025.');
         if (onDataRefresh) await onDataRefresh();
       } else {
         const err = await res.json();
