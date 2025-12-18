@@ -33,7 +33,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
 
-  // Автоматическая инициализация при загрузке данных
   useEffect(() => {
     if (!selectedClassId && classes.length > 0) {
       setSelectedClassId(classes[0].id);
@@ -52,9 +51,8 @@ const JournalPage: React.FC<JournalPageProps> = ({
         setSelectedQuarterId(quarters[0].id);
       }
     }
-  }, [quarters, selectedSubjectId, selectedQuarterId]);
+  }, [quarters, selectedSubjectId]);
 
-  // Panning State
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isPanning, setIsPanning] = useState(false);
   const panStartX = useRef(0);
@@ -90,7 +88,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
       comment
     };
     
-    // Локальное обновление для скорости
     setGrades(prev => {
       if (existingIdx !== -1) {
         const next = [...prev];
@@ -100,7 +97,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
       return [...prev, newGrade];
     });
 
-    // Синхронизация с сервером
     if (onGradeUpdate) {
       await onGradeUpdate(newGrade);
     }
@@ -131,7 +127,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
     if (foGrades.length >= 4) {
       const sum = foGrades.reduce((acc, g) => acc + (g?.points ?? 0), 0);
       const avg = sum / foGrades.length;
-      foPercent = Math.floor(avg * 10); // FO typically counts as a base
+      foPercent = Math.floor(avg * 10);
     }
 
     let summativePercent = 0;
@@ -193,9 +189,21 @@ const JournalPage: React.FC<JournalPageProps> = ({
         topic: lessonData.topic || '',
         homework: lessonData.homework || '',
         type: (lessonData.type as LessonType) || LessonType.NORMAL,
-        maxPoints: lessonData.maxPoints || DEFAULT_MAX_POINTS[(lessonData.type as LessonType) || LessonType.NORMAL]
+        maxPoints: lessonData.maxPoints || 10
       };
       setLessons(prev => [...prev, targetLesson]);
+    }
+
+    // Автоматическое переключение на нужную четверть, если дата урока не в текущей
+    if (lessonData.date) {
+      const matchingQuarter = quarters.find(q => 
+        q.subjectId === selectedSubjectId && 
+        lessonData.date! >= q.startDate && 
+        lessonData.date! <= q.endDate
+      );
+      if (matchingQuarter && matchingQuarter.id !== selectedQuarterId) {
+        setSelectedQuarterId(matchingQuarter.id);
+      }
     }
 
     if (onLessonSave) {
@@ -220,7 +228,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
     return activeQuarter.endDate;
   };
 
-  // --- Right Click Panning Logic ---
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button === 2) {
       setIsPanning(true);
@@ -247,7 +254,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Controls */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
         <div className="flex flex-wrap items-center gap-6">
           <div className="space-y-1">
@@ -286,7 +292,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
         </div>
       </div>
 
-      {/* Journal Table */}
       <div className={`bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden ${isPanning ? 'panning-active' : ''}`}>
         <div 
           ref={scrollContainerRef}

@@ -17,17 +17,26 @@ const LessonModal: React.FC<LessonModalProps> = ({ lesson, defaultDate, onClose,
   const [topic, setTopic] = useState(lesson?.topic || '');
   const [homework, setHomework] = useState(lesson?.homework || '');
   const [type, setType] = useState<LessonType>(lesson?.type || LessonType.NORMAL);
-  const [maxPoints, setMaxPoints] = useState(lesson?.maxPoints || DEFAULT_MAX_POINTS[LessonType.NORMAL]);
+  const [maxPoints, setMaxPoints] = useState<number>(lesson?.maxPoints || DEFAULT_MAX_POINTS[LessonType.NORMAL]);
 
   const handleTypeChange = (newType: LessonType) => {
     setType(newType);
+    // Меняем макс. балл только если это новый урок
     if (!lesson) {
       setMaxPoints(DEFAULT_MAX_POINTS[newType]);
     }
   };
 
   const handleSave = () => {
-    onSave({ date, topic, homework, type, maxPoints });
+    // Гарантируем, что maxPoints - это число, а не NaN
+    const finalMaxPoints = isNaN(maxPoints) || maxPoints <= 0 ? 10 : maxPoints;
+    onSave({ 
+      date, 
+      topic: topic.trim(), 
+      homework: homework.trim(), 
+      type, 
+      maxPoints: finalMaxPoints 
+    });
   };
 
   return (
@@ -69,9 +78,10 @@ const LessonModal: React.FC<LessonModalProps> = ({ lesson, defaultDate, onClose,
                 <label className="block text-sm font-bold text-slate-700 mb-2">Макс. балл</label>
                 <input 
                   type="number" 
-                  value={maxPoints} 
-                  onChange={(e) => setMaxPoints(parseInt(e.target.value))}
+                  value={isNaN(maxPoints) ? '' : maxPoints} 
+                  onChange={(e) => setMaxPoints(parseInt(e.target.value) || 0)}
                   className="w-full px-4 py-3 bg-slate-50 border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all border font-bold"
+                  placeholder="10, 15, 20..."
                 />
               </div>
             </div>
