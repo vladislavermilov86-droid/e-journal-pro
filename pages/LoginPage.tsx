@@ -7,14 +7,13 @@ interface LoginPageProps {
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [login, setLogin] = useState('Vladislav');
-  const [password, setPassword] = useState('Vladislav15');
+  const [login, setLogin] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (login === 'Vladislav' && password === 'Vladislav15') {
-      // ИЗМЕНЕНИЕ: Не сохраняем в localStorage, чтобы требовать ввод пароля каждый раз
       onLogin();
     } else {
       setError('Неверный логин или пароль');
@@ -40,6 +39,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               className="w-full px-5 py-4 rounded-2xl border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all border shadow-sm"
               value={login}
               onChange={(e) => setLogin(e.target.value)}
+              required
             />
           </div>
           <div>
@@ -49,6 +49,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               className="w-full px-5 py-4 rounded-2xl border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all border shadow-sm"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
             />
           </div>
 

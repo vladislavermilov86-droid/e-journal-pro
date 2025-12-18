@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Send, Users, FileSpreadsheet, FileText, Calendar
@@ -27,11 +27,32 @@ const JournalPage: React.FC<JournalPageProps> = ({
   onGradeUpdate, onLessonSave
 }) => {
   const navigate = useNavigate();
-  const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || '');
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjects[0]?.id || '');
-  const [selectedQuarterId, setSelectedQuarterId] = useState<string>(quarters[0]?.id || '');
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
+  const [selectedQuarterId, setSelectedQuarterId] = useState<string>('');
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+
+  // Автоматическая инициализация при загрузке данных
+  useEffect(() => {
+    if (!selectedClassId && classes.length > 0) {
+      setSelectedClassId(classes[0].id);
+    }
+    if (!selectedSubjectId && subjects.length > 0) {
+      setSelectedSubjectId(subjects[0].id);
+    }
+  }, [classes, subjects, selectedClassId, selectedSubjectId]);
+
+  useEffect(() => {
+    if (!selectedQuarterId && quarters.length > 0 && selectedSubjectId) {
+      const relevant = quarters.find(q => q.subjectId === selectedSubjectId);
+      if (relevant) {
+        setSelectedQuarterId(relevant.id);
+      } else {
+        setSelectedQuarterId(quarters[0].id);
+      }
+    }
+  }, [quarters, selectedSubjectId, selectedQuarterId]);
 
   // Panning State
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -110,7 +131,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
     if (foGrades.length >= 4) {
       const sum = foGrades.reduce((acc, g) => acc + (g?.points ?? 0), 0);
       const avg = sum / foGrades.length;
-      foPercent = Math.floor(avg);
+      foPercent = Math.floor(avg * 10); // FO typically counts as a base
     }
 
     let summativePercent = 0;
@@ -232,18 +253,21 @@ const JournalPage: React.FC<JournalPageProps> = ({
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Класс</label>
             <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
+              <option value="" disabled>Класс...</option>
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Предмет</label>
             <select value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
+              <option value="" disabled>Предмет...</option>
               {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Четверть</label>
             <select value={selectedQuarterId} onChange={(e) => setSelectedQuarterId(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
+              <option value="" disabled>Четверть...</option>
               {quarters.filter(q => q.subjectId === selectedSubjectId).map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
             </select>
           </div>
@@ -271,94 +295,102 @@ const JournalPage: React.FC<JournalPageProps> = ({
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           onContextMenu={handleContextMenu}
-          className="overflow-x-auto scroll-smooth panning-container"
+          className="overflow-x-auto scroll-smooth panning-container min-h-[400px]"
         >
-          <table className="w-full border-collapse table-fixed">
-            <thead>
-              <tr className="bg-slate-50/70 journal-header-row">
-                <th className="sticky left-0 z-30 bg-white border-b-2 border-r-2 border-slate-100 p-8 text-left w-[300px] shadow-[10px_0_15px_-10px_rgba(0,0,0,0.05)]">
-                   <div className="flex flex-col gap-1">
-                     <span className="text-xs font-black uppercase tracking-widest text-indigo-600">Список учеников</span>
-                     <span className="text-[10px] font-bold text-slate-400">Всего {filteredStudents.length}</span>
-                   </div>
-                </th>
-                {filteredLessons.map(lesson => (
-                  <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-6 text-left w-[240px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
-                    <div className="flex flex-col justify-between h-full space-y-4">
-                      <div className="flex justify-between items-center">
-                         <span className="text-xl font-black text-slate-800 tracking-tighter">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
-                         <span className="text-[10px] font-black bg-white/80 px-2.5 py-1 rounded-lg border border-slate-200">{lesson.type}</span>
-                      </div>
-                      <div className="text-[11px] font-medium italic text-slate-500 line-clamp-2 h-8 leading-snug">{lesson.topic || 'Без темы'}</div>
-                      <div className="text-[10px] text-slate-400 font-bold bg-white/40 p-2.5 rounded-xl border border-slate-200/50 line-clamp-1 shadow-inner">ДЗ: {lesson.homework || '—'}</div>
+          {filteredLessons.length > 0 || filteredStudents.length > 0 ? (
+            <table className="w-full border-collapse table-fixed">
+              <thead>
+                <tr className="bg-slate-50/70 journal-header-row">
+                  <th className="sticky left-0 z-30 bg-white border-b-2 border-r-2 border-slate-100 p-8 text-left w-[300px] shadow-[10px_0_15px_-10px_rgba(0,0,0,0.05)]">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-black uppercase tracking-widest text-indigo-600">Список учеников</span>
+                      <span className="text-[10px] font-bold text-slate-400">Всего {filteredStudents.length}</span>
                     </div>
                   </th>
-                ))}
-                <th className="bg-slate-900 border-b-2 border-black p-8 w-[140px] text-center shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.2)]">
-                  <span className="text-[11px] font-black uppercase tracking-widest text-white/40 block mb-1">Итог %</span>
-                  <span className="text-2xl font-black text-white">100%</span>
-                </th>
-                <th className="bg-indigo-600 border-b-2 border-indigo-700 p-8 w-[130px] text-center">
-                  <span className="text-[11px] font-black uppercase tracking-widest text-white block">Оценка</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStudents.map(student => {
-                const stats = calculateFinalStats(student.id);
-                return (
-                  <tr key={student.id} className="hover:bg-slate-50/50 transition-colors journal-row group">
-                    <td className="sticky left-0 z-20 bg-white border-b border-r-2 border-slate-100 px-8 py-0 shadow-[10px_0_15px_-10px_rgba(0,0,0,0.05)] h-full">
-                      <div className="flex items-center justify-start h-full gap-5">
-                        <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner shrink-0">
-                          <Users size={20} />
+                  {filteredLessons.map(lesson => (
+                    <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-6 text-left w-[240px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
+                      <div className="flex flex-col justify-between h-full space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xl font-black text-slate-800 tracking-tighter">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
+                          <span className="text-[10px] font-black bg-white/80 px-2.5 py-1 rounded-lg border border-slate-200">{lesson.type}</span>
                         </div>
-                        <div className="flex flex-col justify-center min-w-0">
-                          <span className="text-[16px] font-black text-slate-800 leading-tight truncate">{student.lastName}</span>
-                          <span className="text-xs font-bold text-slate-400 leading-tight truncate">{student.firstName}</span>
+                        <div className="text-[11px] font-medium italic text-slate-500 line-clamp-2 h-8 leading-snug">{lesson.topic || 'Без темы'}</div>
+                        <div className="text-[10px] text-slate-400 font-bold bg-white/40 p-2.5 rounded-xl border border-slate-200/50 line-clamp-1 shadow-inner">ДЗ: {lesson.homework || '—'}</div>
+                      </div>
+                    </th>
+                  ))}
+                  <th className="bg-slate-900 border-b-2 border-black p-8 w-[140px] text-center shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.2)]">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-white/40 block mb-1">Итог %</span>
+                    <span className="text-2xl font-black text-white">100%</span>
+                  </th>
+                  <th className="bg-indigo-600 border-b-2 border-indigo-700 p-8 w-[130px] text-center">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-white block">Оценка</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.map(student => {
+                  const stats = calculateFinalStats(student.id);
+                  return (
+                    <tr key={student.id} className="hover:bg-slate-50/50 transition-colors journal-row group">
+                      <td className="sticky left-0 z-20 bg-white border-b border-r-2 border-slate-100 px-8 py-0 shadow-[10px_0_15px_-10px_rgba(0,0,0,0.05)] h-full">
+                        <div className="flex items-center justify-start h-full gap-5">
+                          <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner shrink-0">
+                            <Users size={20} />
+                          </div>
+                          <div className="flex flex-col justify-center min-w-0">
+                            <span className="text-[16px] font-black text-slate-800 leading-tight truncate">{student.lastName}</span>
+                            <span className="text-xs font-bold text-slate-400 leading-tight truncate">{student.firstName}</span>
+                          </div>
+                          <button 
+                            onClick={() => navigate('/messages', { state: { targetId: student.id, type: 'student' } })}
+                            className="ml-auto opacity-0 group-hover:opacity-100 text-indigo-500 hover:scale-125 transition-all p-2 rounded-xl shrink-0 cursor-pointer"
+                          >
+                            <Send size={16} />
+                          </button>
                         </div>
-                        <button 
-                          onClick={() => navigate('/messages', { state: { targetId: student.id, type: 'student' } })}
-                          className="ml-auto opacity-0 group-hover:opacity-100 text-indigo-500 hover:scale-125 transition-all p-2 rounded-xl shrink-0 cursor-pointer"
-                        >
-                          <Send size={16} />
-                        </button>
-                      </div>
-                    </td>
-                    {filteredLessons.map(lesson => {
-                      const grade = grades.find(g => g.lessonId === lesson.id && g.studentId === student.id);
-                      return (
-                        <GradeCellComponent 
-                          key={`${student.id}-${lesson.id}`}
-                          grade={grade}
-                          lesson={lesson}
-                          onUpdate={(p, a, n, c) => handleUpdateGrade(lesson.id, student.id, p, a, n, c)}
-                        />
-                      );
-                    })}
-                    <td className="bg-slate-50 border-b border-slate-100 p-0 text-center shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.02)] h-full">
-                      <div className="flex items-center justify-center h-full">
-                        <span className={`text-xl font-black tracking-tight ${getPercentageColor(stats.totalPercent)}`}>
-                          {stats.totalPercent}%
-                        </span>
-                      </div>
-                    </td>
-                    <td className="bg-indigo-50/30 border-b border-slate-100 p-0 text-center h-full">
-                      <div className="flex items-center justify-center h-full">
-                        <input 
-                          type="text" 
-                          value={stats.manualMark || ''} 
-                          onChange={(e) => handleUpdateQuarterMark(student.id, e.target.value)}
-                          placeholder=""
-                          className={`w-12 h-12 text-center text-xl font-black rounded-[1.25rem] border-2 outline-none transition-all ${getQuarterMarkColor(stats.manualMark)}`}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      {filteredLessons.map(lesson => {
+                        const grade = grades.find(g => g.lessonId === lesson.id && g.studentId === student.id);
+                        return (
+                          <GradeCellComponent 
+                            key={`${student.id}-${lesson.id}`}
+                            grade={grade}
+                            lesson={lesson}
+                            onUpdate={(p, a, n, c) => handleUpdateGrade(lesson.id, student.id, p, a, n, c)}
+                          />
+                        );
+                      })}
+                      <td className="bg-slate-50 border-b border-slate-100 p-0 text-center shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.02)] h-full">
+                        <div className="flex items-center justify-center h-full">
+                          <span className={`text-xl font-black tracking-tight ${getPercentageColor(stats.totalPercent)}`}>
+                            {stats.totalPercent}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="bg-indigo-50/30 border-b border-slate-100 p-0 text-center h-full">
+                        <div className="flex items-center justify-center h-full">
+                          <input 
+                            type="text" 
+                            value={stats.manualMark || ''} 
+                            onChange={(e) => handleUpdateQuarterMark(student.id, e.target.value)}
+                            placeholder=""
+                            className={`w-12 h-12 text-center text-xl font-black rounded-[1.25rem] border-2 outline-none transition-all ${getQuarterMarkColor(stats.manualMark)}`}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[400px] text-slate-400 bg-slate-50/30">
+               <Calendar size={64} className="mb-4 opacity-10" />
+               <p className="font-bold text-lg">Загрузка данных или уроки отсутствуют</p>
+               <p className="text-sm">Выберите класс и предмет выше</p>
+            </div>
+          )}
         </div>
       </div>
 

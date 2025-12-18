@@ -44,14 +44,15 @@ export const getGradeColor = (points: number | null, maxPoints: number, type: Le
   // Стандартная логика для 10 баллов (и прочих)
   const percent = (points / maxPoints) * 100;
   if (percent >= 86) return 'bg-green-600 text-white border-transparent shadow-sm';
-  if (percent >= 66) return 'bg-emerald-400 text-white border-transparent shadow-sm';
+  // ИЗМЕНЕНИЕ: Порог для зеленого (4) повышен до 71%, чтобы 7 баллов (70%) попадали в оранжевую зону
+  if (percent >= 71) return 'bg-emerald-400 text-white border-transparent shadow-sm';
   if (percent >= 30) return 'bg-orange-500 text-white border-transparent shadow-sm';
   return 'bg-red-600 text-white border-transparent shadow-sm';
 };
 
 export const getPercentageColor = (percent: number) => {
   if (percent >= 86) return 'text-green-600'; // Ярко-зеленый
-  if (percent >= 66) return 'text-emerald-500'; // Зеленый
+  if (percent >= 71) return 'text-emerald-500'; // Зеленый
   if (percent >= 30) return 'text-orange-500'; // Оранжевый
   return 'text-red-600'; // Красный
 };
