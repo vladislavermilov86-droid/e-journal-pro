@@ -10,20 +10,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Выполняем SQL для создания структуры
     await sql.begin(async (sql) => {
-      await sql`CREATE TYPE attendance_status AS ENUM ('Present', 'Absent', 'Excused')`.catch(() => {});
-      await sql`CREATE TYPE lesson_type AS ENUM ('Урок', 'СОР', 'СОЧ', 'Проект', 'Экзамен', 'Тест', 'Классная работа', 'Домашняя работа', 'Самостоятельная работа', 'Практическая работа')`.catch(() => {});
+      // Пытаемся создать типы, если их нет
+      await sql`
+        DO $$ BEGIN
+          CREATE TYPE attendance_status AS ENUM ('Present', 'Absent', 'Excused');
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `;
+      
+      await sql`
+        DO $$ BEGIN
+          CREATE TYPE lesson_type AS ENUM ('Урок', 'СОР', 'СОЧ', 'Проект', 'Экзамен', 'Тест', 'Классная работа', 'Домашняя работа', 'Самостоятельная работа', 'Практическая работа');
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `;
 
       await sql`
         CREATE TABLE IF NOT EXISTS classes (
           id TEXT PRIMARY KEY,
-          name TEXT NOT NULL
+          name TEXT NOT NULL UNIQUE
         )
       `;
 
       await sql`
         CREATE TABLE IF NOT EXISTS subjects (
           id TEXT PRIMARY KEY,
-          name TEXT NOT NULL
+          name TEXT NOT NULL UNIQUE
         )
       `;
 

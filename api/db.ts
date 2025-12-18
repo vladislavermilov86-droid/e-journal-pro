@@ -1,15 +1,22 @@
 
 import postgres from 'postgres';
 
-const connectionString = process.env.DATABASE_URL;
+// Пробуем разные варианты переменных, которые может предоставить Vercel/Neon
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
 if (!connectionString) {
-  throw new Error('DATABASE_URL environment variable is not set');
+  throw new Error('DATABASE_URL or POSTGRES_URL environment variable is not set');
 }
 
-const sql = postgres(connectionString, {
+// Добавляем ssl=require если его нет в строке
+const url = new URL(connectionString);
+if (!url.searchParams.has('sslmode')) {
+  url.searchParams.set('sslmode', 'require');
+}
+
+const sql = postgres(url.toString(), {
   ssl: 'require',
-  max: 1, // Serverless окружение требует малого количества соединений
+  max: 1,
   idle_timeout: 20,
   connect_timeout: 30,
 });

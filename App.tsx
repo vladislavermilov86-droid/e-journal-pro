@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { 
   Users, BookOpen, Calendar, Mail, Settings, LogOut, 
-  BarChart2, CloudIcon, RefreshCw
+  BarChart2, CloudIcon, RefreshCw, AlertTriangle
 } from 'lucide-react';
 import { 
   Class, Student, Subject, Lesson, GradeCell, Message, 
@@ -21,7 +21,6 @@ import StatsPage from './pages/StatsPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
 
-// Улучшенный загрузчик API
 const apiRequest = async (endpoint: string, method: string = 'GET', body?: any) => {
   try {
     const response = await fetch(`/api/${endpoint}`, {
@@ -31,8 +30,11 @@ const apiRequest = async (endpoint: string, method: string = 'GET', body?: any) 
     });
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Ошибка сервера: ${response.status}`);
+      // Специальная обработка для случая, когда таблицы не созданы
+      if (response.status === 500) {
+        console.warn(`API ${endpoint} вернул 500. Возможно, база данных не инициализирована.`);
+      }
+      return null;
     }
     
     return await response.json();
@@ -46,6 +48,7 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [dbError, setDbError] = useState<boolean>(false);
   
   const [classes, setClasses] = useState<Class[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -58,32 +61,45 @@ const App: React.FC = () => {
 
   const loadAllData = useCallback(async () => {
     setIsSyncing(true);
-    const [
-      remoteClasses, 
-      remoteStudents, 
-      remoteSubjects, 
-      remoteLessons, 
-      remoteGrades, 
-      remoteQuarters
-    ] = await Promise.all([
-      apiRequest('classes'),
-      apiRequest('students'),
-      apiRequest('subjects'),
-      apiRequest('lessons'),
-      apiRequest('grades'),
-      apiRequest('quarters')
-    ]);
+    try {
+      const [
+        remoteClasses, 
+        remoteStudents, 
+        remoteSubjects, 
+        remoteLessons, 
+        remoteGrades, 
+        remoteQuarters
+      ] = await Promise.all([
+        apiRequest('classes'),
+        apiRequest('students'),
+        apiRequest('subjects'),
+        apiRequest('lessons'),
+        apiRequest('grades'),
+        apiRequest('quarters')
+      ]);
 
-    // Если API не отвечает (локальная разработка без бэкенда), используем моки
-    setClasses(remoteClasses || initialClasses);
-    setStudents(remoteStudents || initialStudents);
-    setSubjects(remoteSubjects || initialSubjects);
-    setLessons(remoteLessons || initialLessons);
-    setGrades(remoteGrades || initialGrades);
-    setQuarters(remoteQuarters || initialQuarters);
-    
-    setIsSyncing(false);
-    setIsLoading(false);
+      // Если хотя бы один запрос вернул null, значит БД скорее всего не настроена
+      if (remoteClasses === null) setDbError(true);
+      else setDbError(false);
+
+      setClasses(remoteClasses || initialClasses);
+      setStudents(remoteStudents || initialStudents);
+      setSubjects(remoteSubjects || initialSubjects);
+      setLessons(remoteLessons || initialLessons);
+      setGrades(remoteGrades || initialGrades);
+      setQuarters(remoteQuarters || initialQuarters);
+    } catch (e) {
+      setDbError(true);
+      setClasses(initialClasses);
+      setStudents(initialStudents);
+      setSubjects(initialSubjects);
+      setLessons(initialLessons);
+      setGrades(initialGrades);
+      setQuarters(initialQuarters);
+    } finally {
+      setIsSyncing(false);
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -98,7 +114,6 @@ const App: React.FC = () => {
     setIsAuthenticated(false);
   };
 
-  // Вспомогательные функции для синхронизации с базой
   const syncGrade = async (grade: GradeCell) => {
     setIsSyncing(true);
     const result = await apiRequest('grades', 'POST', grade);
@@ -142,7 +157,7 @@ const App: React.FC = () => {
           <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
           <div className="text-center">
             <h2 className="text-xl font-bold text-slate-800">E-Journal Pro</h2>
-            <p className="font-medium text-slate-500">Подключение к Neon DB...</p>
+            <p className="font-medium text-slate-500">Загрузка системы...</p>
           </div>
         </div>
       </div>
@@ -172,12 +187,18 @@ const App: React.FC = () => {
       </nav>
 
       <div className="p-4 border-t border-slate-100 space-y-4">
+        {dbError && (
+          <Link to="/settings" className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold animate-pulse">
+            <AlertTriangle size={16} />
+            БД не настроена! Исправить
+          </Link>
+        )}
         <button 
           onClick={loadAllData}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all w-full ${isSyncing ? 'text-amber-600 bg-amber-50 cursor-wait' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'}`}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all w-full ${isSyncing ? 'text-amber-600 bg-amber-50 cursor-wait' : dbError ? 'text-red-600 bg-red-50' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'}`}
         >
           {isSyncing ? <RefreshCw className="animate-spin" size={14} /> : <CloudIcon size={14} />}
-          {isSyncing ? 'Обновление...' : 'Синхронизировано'}
+          {isSyncing ? 'Обновление...' : dbError ? 'Ошибка БД' : 'Синхронизировано'}
         </button>
         <button 
           onClick={handleLogout}
@@ -220,7 +241,6 @@ const App: React.FC = () => {
                 onLessonSave={syncLesson}
               />
             } />
-            {/* FIX: Removed onSync prop from ClassesPage as it's not defined in its props interface */}
             <Route path="/classes" element={
               <ClassesPage 
                 classes={classes} 
