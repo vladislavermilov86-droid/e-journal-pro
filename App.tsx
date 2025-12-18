@@ -130,13 +130,13 @@ const App: React.FC = () => {
             <div className="bg-indigo-600 p-2 rounded-lg text-white"><BookOpen size={24} /></div>
             <span className="text-xl font-bold text-slate-800">E-Journal <span className="text-indigo-600">Pro</span></span>
           </div>
-          <nav className="flex-1 p-4 space-y-1">
-            <Link to="/journal" className="flex items-center gap-3 p-3 rounded-xl text-slate-600 hover:bg-slate-50">
-              <BookOpen size={20} /> <span className="font-medium">Журнал</span>
-            </Link>
-            <Link to="/settings" className="flex items-center gap-3 p-3 rounded-xl text-slate-600 hover:bg-slate-50">
-              <Settings size={20} /> <span className="font-medium">Настройки</span>
-            </Link>
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+            <SidebarLink to="/journal" icon={<BookOpen size={20} />} label="Журнал" />
+            <SidebarLink to="/classes" icon={<Users size={20} />} label="Классы" />
+            <SidebarLink to="/schedule" icon={<Calendar size={20} />} label="Расписание" />
+            <SidebarLink to="/stats" icon={<BarChart2 size={20} />} label="Аналитика" />
+            <SidebarLink to="/messages" icon={<Mail size={20} />} label="Сообщения" />
+            <SidebarLink to="/settings" icon={<Settings size={20} />} label="Настройки" />
           </nav>
           <div className="p-4 border-t border-slate-100 space-y-3">
             {mode === 'demo' && (
@@ -159,6 +159,10 @@ const App: React.FC = () => {
         <main className="flex-1 p-8 overflow-auto">
           <Routes>
             <Route path="/journal" element={<JournalPage classes={classes} subjects={subjects} students={students} lessons={lessons} grades={grades} quarters={quarters} setLessons={setLessons} setGrades={setGrades} onGradeUpdate={syncGrade} onLessonSave={syncLesson} />} />
+            <Route path="/classes" element={<ClassesPage classes={classes} students={students} setClasses={setClasses} setStudents={setStudents} />} />
+            <Route path="/schedule" element={<SchedulePage subjects={subjects} classes={classes} lessons={lessons} rules={scheduleRules} setLessons={setLessons} setRules={setScheduleRules} />} />
+            <Route path="/messages" element={<MessagesPage messages={messages} students={students} classes={classes} setMessages={setMessages} />} />
+            <Route path="/stats" element={<StatsPage grades={grades} lessons={lessons} students={students} />} />
             <Route path="/settings" element={<SettingsPage classes={classes} subjects={subjects} setSubjects={setSubjects} quarters={quarters} setQuarters={setQuarters} onDataRefresh={loadAllData} />} />
             <Route path="*" element={<Navigate to="/journal" replace />} />
           </Routes>
@@ -167,5 +171,15 @@ const App: React.FC = () => {
     </HashRouter>
   );
 };
+
+const SidebarLink = ({ to, icon, label }: { to: string, icon: React.ReactNode, label: string }) => (
+  <Link 
+    to={to} 
+    className="flex items-center gap-3 p-3 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all duration-200 group"
+  >
+    <span className="group-hover:scale-110 transition-transform">{icon}</span>
+    <span className="font-medium">{label}</span>
+  </Link>
+);
 
 export default App;
