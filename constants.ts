@@ -20,7 +20,7 @@ export const getGradeColor = (points: number | null, maxPoints: number, type: Le
   // СОР 25 баллов
   if (type === LessonType.SOR && maxPoints === 25) {
     if (points >= 22) return 'bg-green-600 text-white border-transparent'; // 5 (88%+)
-    if (points >= 17) return 'bg-emerald-400 text-white border-transparent'; // 4 (68%+)
+    if (points >= 19) return 'bg-emerald-400 text-white border-transparent'; // 4 (76%+)
     if (points >= 8) return 'bg-orange-500 text-white border-transparent'; // 3 (32%+)
     return 'bg-red-600 text-white border-transparent'; // 2
   }
@@ -28,7 +28,7 @@ export const getGradeColor = (points: number | null, maxPoints: number, type: Le
   // СОР 50 баллов
   if (type === LessonType.SOR && maxPoints === 50) {
     if (points >= 43) return 'bg-green-600 text-white border-transparent'; // 5 (86%+)
-    if (points >= 33) return 'bg-emerald-400 text-white border-transparent'; // 4 (66%+)
+    if (points >= 38) return 'bg-emerald-400 text-white border-transparent'; // 4 (76%+)
     if (points >= 15) return 'bg-orange-500 text-white border-transparent'; // 3 (30%+)
     return 'bg-red-600 text-white border-transparent'; // 2
   }
@@ -36,7 +36,7 @@ export const getGradeColor = (points: number | null, maxPoints: number, type: Le
   // СОЧ 40 баллов
   if (type === LessonType.SOCH && maxPoints === 40) {
     if (points >= 35) return 'bg-green-600 text-white border-transparent'; // 5 (87.5%+)
-    if (points >= 27) return 'bg-emerald-400 text-white border-transparent'; // 4 (67.5%+)
+    if (points >= 30) return 'bg-emerald-400 text-white border-transparent'; // 4 (75%+)
     if (points >= 12) return 'bg-orange-500 text-white border-transparent'; // 3 (30%+)
     return 'bg-red-600 text-white border-transparent'; // 2
   }
@@ -44,15 +44,15 @@ export const getGradeColor = (points: number | null, maxPoints: number, type: Le
   // Стандартная логика для 10 баллов (и прочих ФО)
   const percent = (points / maxPoints) * 100;
   if (percent >= 86) return 'bg-green-600 text-white border-transparent shadow-sm'; // 5
-  if (percent >= 66) return 'bg-emerald-400 text-white border-transparent shadow-sm'; // 4
-  if (percent >= 30) return 'bg-orange-500 text-white border-transparent shadow-sm'; // 3
+  if (percent >= 75) return 'bg-emerald-400 text-white border-transparent shadow-sm'; // 4 (8 баллов и выше)
+  if (percent >= 30) return 'bg-orange-500 text-white border-transparent shadow-sm'; // 3 (7 баллов будет тут, так как 70% < 75%)
   return 'bg-red-600 text-white border-transparent shadow-sm'; // 2
 };
 
 export const getPercentageColor = (percent: number) => {
   if (percent >= 86) return 'text-green-600'; // 5 (86-100%)
-  if (percent >= 66) return 'text-emerald-500'; // 4 (66-85%)
-  if (percent >= 30) return 'text-orange-500'; // 3 (30-65%)
+  if (percent >= 75) return 'text-emerald-500'; // 4 (75-85%)
+  if (percent >= 30) return 'text-orange-500'; // 3 (30-74%)
   return 'text-red-600'; // 2 (0-29%)
 };
 
