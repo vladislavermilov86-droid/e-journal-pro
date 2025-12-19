@@ -314,13 +314,13 @@ const JournalPage: React.FC<JournalPageProps> = ({
                   </th>
                   {filteredLessons.map(lesson => (
                     <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-6 text-left w-[240px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
-                      <div className="flex flex-col justify-between h-full space-y-4">
+                      <div className="flex flex-col gap-4">
                         <div className="flex justify-between items-center">
                           <span className="text-xl font-black text-slate-800 tracking-tighter">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
                           <span className="text-[10px] font-black bg-white/80 px-2.5 py-1 rounded-lg border border-slate-200">{lesson.type}</span>
                         </div>
-                        <div className="text-[11px] font-medium italic text-slate-500 line-clamp-2 h-8 leading-snug">{lesson.topic || 'Без темы'}</div>
-                        <div className="text-[10px] text-slate-400 font-bold bg-white/40 p-2.5 rounded-xl border border-slate-200/50 line-clamp-1 shadow-inner">ДЗ: {lesson.homework || '—'}</div>
+                        <div className="text-[11px] font-medium italic text-slate-500 leading-snug whitespace-normal break-words">{lesson.topic || 'Без темы'}</div>
+                        <div className="text-[10px] text-slate-400 font-bold bg-white/40 p-2.5 rounded-xl border border-slate-200/50 shadow-inner whitespace-normal break-words mt-auto">ДЗ: {lesson.homework || '—'}</div>
                       </div>
                     </th>
                   ))}
