@@ -112,38 +112,39 @@ const JournalPage: React.FC<JournalPageProps> = ({
     const quarterLessonIds = filteredLessons.map(l => l.id);
     const quarterGrades = studentGrades.filter(g => quarterLessonIds.includes(g.lessonId));
 
-    const foGrades = filteredLessons
-      .filter(l => 
-        l.type === LessonType.NORMAL || 
-        l.type === LessonType.CLASSWORK || 
-        l.type === LessonType.HOMEWORK || 
-        l.type === LessonType.INDEPENDENT || 
-        l.type === LessonType.PRACTICAL
-      )
-      .map(l => quarterGrades.find(g => g?.lessonId === l.id))
-      .filter(g => g && g.points !== null && g.attendance === AttendanceStatus.PRESENT);
-
-    let foPercent = 0;
-    if (foGrades.length >= 4) {
-      const sum = foGrades.reduce((acc, g) => acc + (g?.points ?? 0), 0);
-      const avg = sum / foGrades.length;
-      foPercent = Math.floor(avg * 10);
-    }
-
-    let summativePercent = 0;
+    // 1. Расчет суммативных баллов (СОР/СОЧ) - балл = процент
+    let summativePoints = 0;
     const summativeLessons = filteredLessons.filter(l => l.type === LessonType.SOR || l.type === LessonType.SOCH);
     summativeLessons.forEach(l => {
       const g = quarterGrades.find(grade => grade?.lessonId === l.id);
-      if (g && g.points !== null) {
-        summativePercent += g.points; 
+      if (g && g.points !== null && g.attendance === AttendanceStatus.PRESENT) {
+        summativePoints += g.points;
       }
     });
 
-    const totalPercent = Math.min(100, foPercent + summativePercent);
+    // 2. Расчет формативных оценок (ФО) - средний балл только если их 4+
+    const formativeLessons = filteredLessons.filter(l => 
+      l.type !== LessonType.SOR && l.type !== LessonType.SOCH
+    );
+    
+    const foGradesWithPoints = formativeLessons
+      .map(l => quarterGrades.find(g => g?.lessonId === l.id))
+      .filter(g => g && g.points !== null && g.attendance === AttendanceStatus.PRESENT);
+
+    let foContribution = 0;
+    if (foGradesWithPoints.length >= 4) {
+      const sumFO = foGradesWithPoints.reduce((acc, g) => acc + (g?.points ?? 0), 0);
+      const avgFO = sumFO / foGradesWithPoints.length;
+      foContribution = Math.round(avgFO); // Округляем до ближайшего целого (9.1 -> 9, 9.5 -> 10)
+    }
+
+    // Итоговый процент = Сумма СОР/СОЧ + Вклад ФО
+    const totalPercent = Math.min(100, summativePoints + foContribution);
+    
     const quarterLessonId = `quarter-${selectedQuarterId}`;
     const manualMark = grades.find(g => g.studentId === studentId && g.lessonId === quarterLessonId)?.points;
 
-    return { foPercent, summativePercent, totalPercent, manualMark };
+    return { foPercent: foContribution, summativePercent: summativePoints, totalPercent, manualMark };
   };
 
   const exportToExcel = () => {
