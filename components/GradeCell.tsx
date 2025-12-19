@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { AttendanceStatus, GradeCell, Lesson } from '../types';
-import { getGradeColor } from '../constants';
+import { AttendanceStatus, GradeCell, Lesson } from '../types.ts';
+import { getGradeColor } from '../constants.ts';
 import { MessageSquare, AlertCircle } from 'lucide-react';
 
 interface GradeCellProps {
@@ -66,16 +66,14 @@ const GradeCellComponent: React.FC<GradeCellProps> = ({ grade, lesson, onUpdate 
     setShowReasonModal(false);
   };
 
-  // Получаем базовый стиль для баллов
   const cellStyle = getGradeColor(grade?.points ?? null, lesson.maxPoints, lesson.type);
   
-  // Определяем финальный стиль на основе статуса (Н, П, Б)
   const finalStyle = grade?.attendance === AttendanceStatus.ABSENT 
-    ? 'bg-red-600 text-white border-transparent' // Н - красная
+    ? 'bg-red-600 text-white border-transparent' 
     : grade?.attendance === AttendanceStatus.EXCUSED 
-    ? 'bg-blue-500 text-white border-transparent' // П - голубая (синяя)
+    ? 'bg-blue-500 text-white border-transparent' 
     : (grade?.attendanceNote && !grade?.points) 
-    ? 'bg-purple-600 text-white border-transparent' // Б - фиолетовая
+    ? 'bg-purple-600 text-white border-transparent' 
     : cellStyle;
 
   return (

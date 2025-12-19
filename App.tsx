@@ -3,23 +3,23 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { 
   Users, BookOpen, Calendar, Mail, Settings, LogOut, 
-  BarChart2, CloudIcon, RefreshCw, AlertTriangle, Database, Info, ChevronRight
+  BarChart2, CloudIcon, RefreshCw, ChevronRight, Info
 } from 'lucide-react';
 import { 
   Class, Student, Subject, Lesson, GradeCell, Message, 
   Quarter, ScheduleRule 
-} from './types';
+} from './types.ts';
 import { 
   initialClasses, initialStudents, initialSubjects, 
   initialLessons, initialGrades, initialQuarters 
-} from './mockData';
-import JournalPage from './pages/JournalPage';
-import ClassesPage from './pages/ClassesPage';
-import SchedulePage from './pages/SchedulePage';
-import MessagesPage from './pages/MessagesPage';
-import StatsPage from './pages/StatsPage';
-import SettingsPage from './pages/SettingsPage';
-import LoginPage from './pages/LoginPage';
+} from './mockData.ts';
+import JournalPage from './pages/JournalPage.tsx';
+import ClassesPage from './pages/ClassesPage.tsx';
+import SchedulePage from './pages/SchedulePage.tsx';
+import MessagesPage from './pages/MessagesPage.tsx';
+import StatsPage from './pages/StatsPage.tsx';
+import SettingsPage from './pages/SettingsPage.tsx';
+import LoginPage from './pages/LoginPage.tsx';
 
 const apiRequest = async (endpoint: string, method: string = 'GET', body?: any) => {
   try {
@@ -100,7 +100,6 @@ const App: React.FC = () => {
   }, [isAuthenticated, loadAllData]);
 
   const syncGrade = async (grade: GradeCell) => {
-    // Пытаемся сохранить всегда. Если БД настроена - сохранится.
     await apiRequest('grades', 'POST', grade);
   };
 
@@ -108,7 +107,6 @@ const App: React.FC = () => {
     setIsSyncing(true);
     await apiRequest('lessons', isDelete ? 'DELETE' : 'POST', lesson);
     setIsSyncing(false);
-    // После сохранения урока обновляем всё, чтобы подтянулись ID и связи
     loadAllData();
   };
 
@@ -116,7 +114,7 @@ const App: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-        <p className="font-bold text-slate-600">Соединение с Neon...</p>
+        <p className="font-bold text-slate-600">Загрузка данных...</p>
       </div>
     </div>
   );
@@ -146,11 +144,11 @@ const App: React.FC = () => {
 
           <div className="p-6 border-t border-slate-100 space-y-4">
             {mode === 'demo' && (
-              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 shadow-sm animate-pulse">
+              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 shadow-sm">
                 <div className="flex items-center gap-2 text-amber-700 text-[10px] font-black uppercase mb-1">
                   <Info size={14} /> Временный режим
                 </div>
-                <p className="text-[10px] text-amber-600 font-medium leading-tight">Данные не в облаке. Зайдите в Настройки и нажмите "Загрузить демо".</p>
+                <p className="text-[10px] text-amber-600 font-medium leading-tight">Данные хранятся локально. Настройте облако в Настройках.</p>
               </div>
             )}
             

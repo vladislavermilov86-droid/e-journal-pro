@@ -7,7 +7,6 @@
   <title>E-Journal Pro</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Внешние библиотеки для экспорта (CDN с фиксацией версии) -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.25/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -32,14 +31,13 @@
     ::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
     }
-    /* Строго фиксированная высота строк для выравнивания */
+    /* Исправленные стили для строк журнала */
     .journal-row {
       height: 70px !important;
     }
     .journal-header-row {
-      min-height: 160px;
+      height: 180px !important; /* Используем height вместо min-height для tr */
     }
-    /* Предотвращение выделения текста при панорамировании */
     .panning-active {
       user-select: none !important;
       cursor: grabbing !important;
@@ -65,5 +63,6 @@
 </head>
 <body class="bg-slate-50 text-slate-900">
   <div id="root"></div>
+  <script type="module" src="index.tsx"></script>
 </body>
 </html>

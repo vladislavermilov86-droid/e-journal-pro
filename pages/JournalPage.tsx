@@ -2,12 +2,12 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Plus, Send, Users, FileSpreadsheet, FileText, Calendar
+  Plus, Send, Users, FileSpreadsheet, Calendar
 } from 'lucide-react';
-import { Class, Subject, Student, Lesson, GradeCell, Quarter, AttendanceStatus, LessonType } from '../types';
-import { LESSON_TYPE_COLORS, DEFAULT_MAX_POINTS, getQuarterMarkColor, getPercentageColor } from '../constants';
-import GradeCellComponent from '../components/GradeCell';
-import LessonModal from '../components/LessonModal';
+import { Class, Subject, Student, Lesson, GradeCell, Quarter, AttendanceStatus, LessonType } from '../types.ts';
+import { LESSON_TYPE_COLORS, getQuarterMarkColor, getPercentageColor } from '../constants.ts';
+import GradeCellComponent from '../components/GradeCell.tsx';
+import LessonModal from '../components/LessonModal.tsx';
 
 interface JournalPageProps {
   classes: Class[];
@@ -194,7 +194,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
       setLessons(prev => [...prev, targetLesson]);
     }
 
-    // Автоматическое переключение на нужную четверть, если дата урока не в текущей
     if (lessonData.date) {
       const matchingQuarter = quarters.find(q => 
         q.subjectId === selectedSubjectId && 
@@ -259,33 +258,28 @@ const JournalPage: React.FC<JournalPageProps> = ({
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Класс</label>
             <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
-              <option value="" disabled>Класс...</option>
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Предмет</label>
             <select value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
-              <option value="" disabled>Предмет...</option>
               {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Четверть</label>
             <select value={selectedQuarterId} onChange={(e) => setSelectedQuarterId(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
-              <option value="" disabled>Четверть...</option>
               {quarters.filter(q => q.subjectId === selectedSubjectId).map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
             </select>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-            <button onClick={exportToExcel} title="Excel (Full RU)" className="p-3 text-slate-500 hover:text-green-600 hover:bg-white rounded-xl transition-all shadow-sm">
-              <FileSpreadsheet size={20} />
-            </button>
-          </div>
-          <button onClick={() => { setEditingLesson(null); setIsLessonModalOpen(true); }} className="px-8 py-4 bg-indigo-600 text-white rounded-[1.5rem] font-black text-sm hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 active:scale-95 flex items-center gap-2">
+          <button onClick={exportToExcel} className="p-3 bg-slate-50 text-slate-500 hover:text-green-600 rounded-xl transition-all border border-slate-100">
+            <FileSpreadsheet size={20} />
+          </button>
+          <button onClick={() => { setEditingLesson(null); setIsLessonModalOpen(true); }} className="px-8 py-4 bg-indigo-600 text-white rounded-[1.5rem] font-black text-sm hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center gap-2">
             <Plus size={20} />
             Новый урок
           </button>
@@ -300,7 +294,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           onContextMenu={handleContextMenu}
-          className="overflow-x-auto scroll-smooth panning-container min-h-[400px]"
+          className="overflow-x-auto scroll-smooth panning-container min-h-[500px]"
         >
           {filteredLessons.length > 0 || filteredStudents.length > 0 ? (
             <table className="w-full border-collapse table-fixed">
@@ -314,19 +308,18 @@ const JournalPage: React.FC<JournalPageProps> = ({
                   </th>
                   {filteredLessons.map(lesson => (
                     <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-6 text-left w-[240px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
-                      <div className="flex flex-col gap-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xl font-black text-slate-800 tracking-tighter">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
+                      <div className="flex flex-col gap-3 h-full overflow-hidden">
+                        <div className="flex justify-between items-center shrink-0">
+                          <span className="text-xl font-black text-slate-800">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
                           <span className="text-[10px] font-black bg-white/80 px-2.5 py-1 rounded-lg border border-slate-200">{lesson.type}</span>
                         </div>
-                        <div className="text-[11px] font-medium italic text-slate-500 leading-snug whitespace-normal break-words">{lesson.topic || 'Без темы'}</div>
-                        <div className="text-[10px] text-slate-400 font-bold bg-white/40 p-2.5 rounded-xl border border-slate-200/50 shadow-inner whitespace-normal break-words mt-auto">ДЗ: {lesson.homework || '—'}</div>
+                        <div className="text-[11px] font-medium italic text-slate-500 line-clamp-2 leading-snug">{lesson.topic || 'Без темы'}</div>
+                        <div className="text-[10px] text-slate-400 font-bold bg-white/40 p-2 rounded-xl border border-slate-200/50 mt-auto line-clamp-2">ДЗ: {lesson.homework || '—'}</div>
                       </div>
                     </th>
                   ))}
                   <th className="bg-slate-900 border-b-2 border-black p-8 w-[140px] text-center shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.2)]">
                     <span className="text-[11px] font-black uppercase tracking-widest text-white/40 block mb-1">Итог %</span>
-                    <span className="text-2xl font-black text-white">100%</span>
                   </th>
                   <th className="bg-indigo-600 border-b-2 border-indigo-700 p-8 w-[130px] text-center">
                     <span className="text-[11px] font-black uppercase tracking-widest text-white block">Оценка</span>
@@ -390,10 +383,9 @@ const JournalPage: React.FC<JournalPageProps> = ({
               </tbody>
             </table>
           ) : (
-            <div className="flex flex-col items-center justify-center h-[400px] text-slate-400 bg-slate-50/30">
+            <div className="flex flex-col items-center justify-center h-[400px] text-slate-400">
                <Calendar size={64} className="mb-4 opacity-10" />
-               <p className="font-bold text-lg">Загрузка данных или уроки отсутствуют</p>
-               <p className="text-sm">Выберите класс и предмет выше</p>
+               <p className="font-bold text-lg">Уроки не найдены</p>
             </div>
           )}
         </div>
