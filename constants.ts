@@ -1,5 +1,5 @@
 
-import { LessonType } from './types';
+import { LessonType } from './types.ts';
 
 export const LESSON_TYPE_COLORS: Record<LessonType, string> = {
   [LessonType.NORMAL]: 'bg-white border-slate-200',
@@ -19,42 +19,41 @@ export const getGradeColor = (points: number | null, maxPoints: number, type: Le
 
   // СОР 25 баллов
   if (type === LessonType.SOR && maxPoints === 25) {
-    if (points >= 22) return 'bg-green-600 text-white border-transparent'; // Ярко-зеленый
-    if (points >= 17) return 'bg-emerald-400 text-white border-transparent'; // Зеленый
-    if (points >= 8) return 'bg-orange-500 text-white border-transparent'; // Оранжевый
-    return 'bg-red-600 text-white border-transparent'; // Красный
+    if (points >= 22) return 'bg-green-600 text-white border-transparent'; // 5 (88%+)
+    if (points >= 17) return 'bg-emerald-400 text-white border-transparent'; // 4 (68%+)
+    if (points >= 8) return 'bg-orange-500 text-white border-transparent'; // 3 (32%+)
+    return 'bg-red-600 text-white border-transparent'; // 2
   }
 
   // СОР 50 баллов
   if (type === LessonType.SOR && maxPoints === 50) {
-    if (points >= 43) return 'bg-green-600 text-white border-transparent'; // Ярко-зеленый
-    if (points >= 33) return 'bg-emerald-400 text-white border-transparent'; // Зеленый
-    if (points >= 15) return 'bg-orange-500 text-white border-transparent'; // Оранжевый
-    return 'bg-red-600 text-white border-transparent'; // Красный
+    if (points >= 43) return 'bg-green-600 text-white border-transparent'; // 5 (86%+)
+    if (points >= 33) return 'bg-emerald-400 text-white border-transparent'; // 4 (66%+)
+    if (points >= 15) return 'bg-orange-500 text-white border-transparent'; // 3 (30%+)
+    return 'bg-red-600 text-white border-transparent'; // 2
   }
 
   // СОЧ 40 баллов
   if (type === LessonType.SOCH && maxPoints === 40) {
-    if (points >= 36) return 'bg-green-600 text-white border-transparent'; // Ярко-зеленый
-    if (points >= 27) return 'bg-emerald-400 text-white border-transparent'; // Зеленый
-    if (points >= 12) return 'bg-orange-500 text-white border-transparent'; // Оранжевый
-    return 'bg-red-600 text-white border-transparent'; // Красный
+    if (points >= 35) return 'bg-green-600 text-white border-transparent'; // 5 (87.5%+)
+    if (points >= 27) return 'bg-emerald-400 text-white border-transparent'; // 4 (67.5%+)
+    if (points >= 12) return 'bg-orange-500 text-white border-transparent'; // 3 (30%+)
+    return 'bg-red-600 text-white border-transparent'; // 2
   }
 
-  // Стандартная логика для 10 баллов (и прочих)
+  // Стандартная логика для 10 баллов (и прочих ФО)
   const percent = (points / maxPoints) * 100;
-  if (percent >= 86) return 'bg-green-600 text-white border-transparent shadow-sm';
-  // ИЗМЕНЕНИЕ: Порог для зеленого (4) повышен до 71%, чтобы 7 баллов (70%) попадали в оранжевую зону
-  if (percent >= 71) return 'bg-emerald-400 text-white border-transparent shadow-sm';
-  if (percent >= 30) return 'bg-orange-500 text-white border-transparent shadow-sm';
-  return 'bg-red-600 text-white border-transparent shadow-sm';
+  if (percent >= 86) return 'bg-green-600 text-white border-transparent shadow-sm'; // 5
+  if (percent >= 66) return 'bg-emerald-400 text-white border-transparent shadow-sm'; // 4
+  if (percent >= 30) return 'bg-orange-500 text-white border-transparent shadow-sm'; // 3
+  return 'bg-red-600 text-white border-transparent shadow-sm'; // 2
 };
 
 export const getPercentageColor = (percent: number) => {
-  if (percent >= 86) return 'text-green-600'; // Ярко-зеленый
-  if (percent >= 71) return 'text-emerald-500'; // Зеленый
-  if (percent >= 30) return 'text-orange-500'; // Оранжевый
-  return 'text-red-600'; // Красный
+  if (percent >= 86) return 'text-green-600'; // 5 (86-100%)
+  if (percent >= 66) return 'text-emerald-500'; // 4 (66-85%)
+  if (percent >= 30) return 'text-orange-500'; // 3 (30-65%)
+  return 'text-red-600'; // 2 (0-29%)
 };
 
 export const getQuarterMarkColor = (mark: string | number | null) => {
