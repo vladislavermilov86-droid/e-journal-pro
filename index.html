@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,18 +17,19 @@
       -webkit-backdrop-filter: blur(10px);
     }
     ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 8px;
+      height: 8px;
     }
     ::-webkit-scrollbar-track {
-      background: #f1f1f1;
+      background: #f8fafc;
     }
     ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
+      background: #e2e8f0;
       border-radius: 10px;
+      border: 2px solid #f8fafc;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
+      background: #cbd5e1;
     }
     /* Сжатые стили для лучшего обзора */
     .journal-row {
@@ -42,8 +42,11 @@
       user-select: none !important;
       cursor: grabbing !important;
     }
-    .panning-container {
-      cursor: crosshair;
+    .panning-active .panning-container {
+      scroll-behavior: auto !important; /* Отключаем плавность для мгновенного отклика */
+    }
+    .panning-active * {
+      pointer-events: none !important;
     }
     /* Плавное появление контента */
     .fade-in {
@@ -69,7 +72,7 @@
 }
 </script>
 </head>
-<body class="bg-slate-50 text-slate-900 overflow-hidden">
+<body class="bg-slate-50 text-slate-900">
   <div id="root"></div>
   <script type="module" src="index.tsx"></script>
 </body>

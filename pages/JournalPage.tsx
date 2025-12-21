@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -38,6 +37,10 @@ const JournalPage: React.FC<JournalPageProps> = ({
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
+
   useEffect(() => {
     if (!selectedClassId && classes.length > 0) {
       setSelectedClassId(classes[0].id);
@@ -58,10 +61,34 @@ const JournalPage: React.FC<JournalPageProps> = ({
     }
   }, [quarters, selectedSubjectId]);
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isPanning, setIsPanning] = useState(false);
-  const panStartX = useRef(0);
-  const panScrollLeft = useRef(0);
+  // Глобальные слушатели для надежного панорамирования
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!isPanning || !scrollContainerRef.current) return;
+      
+      const dx = e.clientX - panStartRef.current.x;
+      const dy = e.clientY - panStartRef.current.y;
+
+      scrollContainerRef.current.scrollLeft = panStartRef.current.scrollLeft - dx;
+      scrollContainerRef.current.scrollTop = panStartRef.current.scrollTop - dy;
+    };
+
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      if (e.button === 2 || isPanning) {
+        setIsPanning(false);
+      }
+    };
+
+    if (isPanning) {
+      window.addEventListener('mousemove', handleGlobalMouseMove);
+      window.addEventListener('mouseup', handleGlobalMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isPanning]);
 
   const filteredStudents = useMemo(() => 
     students.filter(s => s.classId === selectedClassId), 
@@ -240,31 +267,22 @@ const JournalPage: React.FC<JournalPageProps> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 2) {
-      setIsPanning(true);
-      panStartX.current = e.pageX - (scrollContainerRef.current?.offsetLeft || 0);
-      panScrollLeft.current = scrollContainerRef.current?.scrollLeft || 0;
+    if (e.button === 2) { // Правая кнопка
+      e.preventDefault();
+      if (scrollContainerRef.current) {
+        setIsPanning(true);
+        panStartRef.current = {
+          x: e.clientX,
+          y: e.clientY,
+          scrollLeft: scrollContainerRef.current.scrollLeft,
+          scrollTop: scrollContainerRef.current.scrollTop
+        };
+      }
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPanning || !scrollContainerRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - (scrollContainerRef.current.offsetLeft || 0);
-    const walk = (x - panStartX.current) * 1.5; 
-    scrollContainerRef.current.scrollLeft = panScrollLeft.current - walk;
-  };
-
-  const handleMouseUp = () => {
-    setIsPanning(false);
-  };
-
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-  };
-
   return (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className={`space-y-4 h-full flex flex-col overflow-hidden ${isPanning ? 'panning-active' : ''}`}>
       <div className="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-slate-100 shrink-0">
         <div className="flex items-center gap-4">
           <div className="space-y-0.5">
@@ -298,18 +316,17 @@ const JournalPage: React.FC<JournalPageProps> = ({
         </div>
       </div>
 
-      <div className={`bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden flex-1 ${isPanning ? 'panning-active' : ''}`}>
+      <div 
+        className="bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden flex-1 relative"
+        onContextMenu={(e) => e.preventDefault()}
+      >
         <div 
           ref={scrollContainerRef}
           onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onContextMenu={handleContextMenu}
-          className="overflow-x-auto scroll-smooth panning-container h-full"
+          className={`w-full h-full overflow-auto panning-container ${isPanning ? '' : 'scroll-smooth'}`}
         >
           {filteredLessons.length > 0 || filteredStudents.length > 0 ? (
-            <table className="w-full border-collapse table-fixed">
+            <table className="border-collapse table-fixed min-w-max" style={{ minWidth: 'max-content' }}>
               <thead>
                 <tr className="bg-slate-50/70 journal-header-row">
                   <th className="sticky left-0 z-30 bg-white border-b-2 border-r-2 border-slate-100 p-4 text-left w-[220px] shadow-[8px_0_12px_-8px_rgba(0,0,0,0.05)]">
