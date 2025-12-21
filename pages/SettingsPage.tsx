@@ -22,7 +22,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [activeTab, setActiveTab] = useState<'general' | 'sql'>('general');
   const [isInitializing, setIsInitializing] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
-  const [dbInfo, setDbInfo] = useState<{ connected: boolean; message: string }>({ connected: false, message: 'Проверка...' });
+  const [dbInfo, setDbInfo] = useState<{ connected: boolean; message: string; subjectsInCloud: number }>({ 
+    connected: false, 
+    message: 'Проверка...',
+    subjectsInCloud: 0
+  });
 
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newQuarter, setNewQuarter] = useState({
@@ -41,10 +45,24 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const checkConnection = async () => {
     try {
-      const res = await fetch('/api/classes');
-      if (res.ok) setDbInfo({ connected: true, message: 'База данных Neon подключена' });
-      else setDbInfo({ connected: false, message: 'Таблицы еще не созданы' });
-    } catch (e) { setDbInfo({ connected: false, message: 'Нет связи с сервером' }); }
+      const [resClasses, resSubjects] = await Promise.all([
+        fetch('/api/classes'),
+        fetch('/api/subjects')
+      ]);
+      
+      if (resClasses.ok) {
+        const cloudSubjects = await resSubjects.json();
+        setDbInfo({ 
+          connected: true, 
+          message: 'База данных Neon подключена',
+          subjectsInCloud: cloudSubjects.length || 0
+        });
+      } else {
+        setDbInfo({ connected: false, message: 'Таблицы еще не созданы', subjectsInCloud: 0 });
+      }
+    } catch (e) { 
+      setDbInfo({ connected: false, message: 'Нет связи с сервером (проверьте DATABASE_URL)', subjectsInCloud: 0 }); 
+    }
   };
 
   const apiCall = async (endpoint: string, method: string, body?: any, query?: string) => {
@@ -55,8 +73,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined
       });
-      return res.ok;
-    } catch (e) {
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Ошибка API');
+      }
+      return true;
+    } catch (e: any) {
+      alert(`Ошибка: ${e.message}`);
       return false;
     }
   };
@@ -68,6 +91,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     if (success) {
       if (onDataRefresh) await onDataRefresh();
       setNewSubjectName('');
+      checkConnection();
     } else if (!dbInfo.connected) {
        setSubjects(prev => [...prev, subject]);
        setNewSubjectName('');
@@ -84,10 +108,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       alert('Заполните все поля четверти');
       return;
     }
+    
+    if (dbInfo.connected && dbInfo.subjectsInCloud === 0) {
+      alert('Сначала добавьте и сохраните хотя бы один предмет в облаке!');
+      return;
+    }
+
     const quarter: Quarter = {
       ...newQuarter,
       id: `qtr-${Math.random().toString(36).substr(2, 9)}`
     };
+    
     const success = await apiCall('quarters', 'POST', quarter);
     if (success) {
       if (onDataRefresh) await onDataRefresh();
@@ -115,7 +146,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       if (res.ok) {
         await checkConnection();
         alert('База данных успешно инициализирована!');
-      } else alert('Ошибка при настройке базы');
+      } else {
+        const err = await res.json();
+        alert(`Ошибка при настройке базы: ${err.message}`);
+      }
     } catch (e) { alert('Ошибка сети при инициализации'); }
     finally { setIsInitializing(false); }
   };
@@ -139,6 +173,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       if (res.ok) {
         alert('База очищена! Теперь вы можете создать свои четверти и уроки.');
         if (onDataRefresh) await onDataRefresh();
+        checkConnection();
       } else {
         const err = await res.json();
         alert(`Ошибка: ${err.message}`);
@@ -171,6 +206,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 <div>
                   <h2 className="text-3xl font-black text-slate-800">Статус Облака</h2>
                   <p className={`text-lg font-bold mt-1 ${dbInfo.connected ? 'text-emerald-600' : 'text-red-500'}`}>{dbInfo.message}</p>
+                  {dbInfo.connected && (
+                    <p className="text-sm text-slate-400 mt-1">Предметов в облаке: {dbInfo.subjectsInCloud}</p>
+                  )}
                 </div>
                 <button onClick={checkConnection} className="md:ml-auto p-5 bg-slate-100 rounded-3xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
                   <RefreshCw size={24} />
@@ -218,6 +256,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               <button onClick={handleAddSubject} className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all"><Plus size={24} /></button>
             </div>
             <div className="space-y-3 overflow-y-auto max-h-[400px] pr-2">
+              {subjects.length === 0 && (
+                <p className="text-center py-10 text-slate-400 font-medium italic">Предметы не созданы</p>
+              )}
               {subjects.map(s => (
                 <div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl group">
                   <span className="font-bold text-slate-700">{s.name}</span>
@@ -232,30 +273,42 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               <div className="bg-emerald-500 p-3 rounded-2xl text-white"><Calendar size={24} /></div>
               <h3 className="text-2xl font-black text-slate-800">Четверти</h3>
             </div>
-            <div className="space-y-4 mb-8 bg-slate-50 p-6 rounded-3xl border border-slate-100">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Название</label>
-                  <input type="text" placeholder="Напр: 3 Четверть" value={newQuarter.name} onChange={(e) => setNewQuarter({...newQuarter, name: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none" />
+            
+            {dbInfo.connected && dbInfo.subjectsInCloud === 0 ? (
+               <div className="mb-8 p-6 bg-amber-50 border border-amber-200 rounded-3xl text-amber-700 text-sm font-medium flex gap-3">
+                 <Info size={24} className="shrink-0" />
+                 <p>Прежде чем создавать четверти, добавьте хотя бы один <b>предмет</b> выше. Четверть должна быть привязана к предмету, существующему в облаке.</p>
+               </div>
+            ) : (
+              <div className="space-y-4 mb-8 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Название</label>
+                    <input type="text" placeholder="Напр: 3 Четверть" value={newQuarter.name} onChange={(e) => setNewQuarter({...newQuarter, name: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Предмет</label>
+                    <select value={newQuarter.subjectId} onChange={(e) => setNewQuarter({...newQuarter, subjectId: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none bg-white">
+                      {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Начало</label>
+                    <input type="date" value={newQuarter.startDate} onChange={(e) => setNewQuarter({...newQuarter, startDate: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Конец</label>
+                    <input type="date" value={newQuarter.endDate} onChange={(e) => setNewQuarter({...newQuarter, endDate: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none" />
+                  </div>
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Предмет</label>
-                  <select value={newQuarter.subjectId} onChange={(e) => setNewQuarter({...newQuarter, subjectId: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none bg-white">
-                    {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Начало</label>
-                  <input type="date" value={newQuarter.startDate} onChange={(e) => setNewQuarter({...newQuarter, startDate: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Конец</label>
-                  <input type="date" value={newQuarter.endDate} onChange={(e) => setNewQuarter({...newQuarter, endDate: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none" />
-                </div>
+                <button onClick={handleAddQuarter} className="w-full py-3 bg-emerald-500 text-white rounded-2xl font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-2"><Plus size={20} /> Добавить четверть</button>
               </div>
-              <button onClick={handleAddQuarter} className="w-full py-3 bg-emerald-500 text-white rounded-2xl font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-2"><Plus size={20} /> Добавить четверть</button>
-            </div>
+            )}
+
             <div className="space-y-3 overflow-y-auto max-h-[300px] pr-2">
+              {quarters.length === 0 && (
+                <p className="text-center py-10 text-slate-400 font-medium italic">Четверти не созданы</p>
+              )}
               {quarters.map(q => {
                 const subject = subjects.find(s => s.id === q.subjectId);
                 return (

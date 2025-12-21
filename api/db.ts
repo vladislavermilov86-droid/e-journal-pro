@@ -9,9 +9,14 @@ if (!connectionString) {
 
 const sql = postgres(connectionString || '', {
   ssl: 'require',
-  max: 10, // Увеличено с 1 до 10
+  max: 10,
   idle_timeout: 20,
   connect_timeout: 30,
+  // Добавляем параметры для лучшей совместимости с Neon
+  transform: {
+    ...postgres.camel,
+    undefined: null
+  }
 });
 
 export default sql;
