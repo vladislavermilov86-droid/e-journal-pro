@@ -139,7 +139,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
     const quarterLessonIds = filteredLessons.map(l => l.id);
     const quarterGrades = studentGrades.filter(g => quarterLessonIds.includes(g.lessonId));
 
-    // 1. Расчет суммативных баллов (СОР/СОЧ)
     let summativePoints = 0;
     const summativeLessons = filteredLessons.filter(l => l.type === LessonType.SOR || l.type === LessonType.SOCH);
     summativeLessons.forEach(l => {
@@ -149,7 +148,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
       }
     });
 
-    // 2. Расчет формативных оценок (ФО)
     const formativeLessons = filteredLessons.filter(l => 
       l.type !== LessonType.SOR && l.type !== LessonType.SOCH
     );
@@ -166,8 +164,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
     }
 
     const totalPercent = Math.min(100, summativePoints + foContribution);
-    
-    // Берем ручную оценку из нового хранилища
     const manualMark = quarterMarks.find(qm => qm.studentId === studentId && qm.quarterId === selectedQuarterId)?.mark;
 
     return { foPercent: foContribution, summativePercent: summativePoints, totalPercent, manualMark };
@@ -268,41 +264,41 @@ const JournalPage: React.FC<JournalPageProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Класс</label>
-            <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
+    <div className="space-y-4 h-full flex flex-col">
+      <div className="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-slate-100 shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="space-y-0.5">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Класс</label>
+            <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="bg-slate-50 border-none rounded-xl px-4 py-2 text-xs font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Предмет</label>
-            <select value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
+          <div className="space-y-0.5">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Предмет</label>
+            <select value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} className="bg-slate-50 border-none rounded-xl px-4 py-2 text-xs font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
               {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Четверть</label>
-            <select value={selectedQuarterId} onChange={(e) => setSelectedQuarterId(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
+          <div className="space-y-0.5">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Четверть</label>
+            <select value={selectedQuarterId} onChange={(e) => setSelectedQuarterId(e.target.value)} className="bg-slate-50 border-none rounded-xl px-4 py-2 text-xs font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
               {quarters.filter(q => q.subjectId === selectedSubjectId).map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
             </select>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button onClick={exportToExcel} className="p-3 bg-slate-50 text-slate-500 hover:text-green-600 rounded-xl transition-all border border-slate-100">
-            <FileSpreadsheet size={20} />
+        <div className="flex items-center gap-2">
+          <button onClick={exportToExcel} className="p-2 bg-slate-50 text-slate-500 hover:text-green-600 rounded-xl transition-all border border-slate-100">
+            <FileSpreadsheet size={18} />
           </button>
-          <button onClick={() => { setEditingLesson(null); setIsLessonModalOpen(true); }} className="px-8 py-4 bg-indigo-600 text-white rounded-[1.5rem] font-black text-sm hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center gap-2">
-            <Plus size={20} />
+          <button onClick={() => { setEditingLesson(null); setIsLessonModalOpen(true); }} className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center gap-2">
+            <Plus size={16} />
             Новый урок
           </button>
         </div>
       </div>
 
-      <div className={`bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden ${isPanning ? 'panning-active' : ''}`}>
+      <div className={`bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden flex-1 ${isPanning ? 'panning-active' : ''}`}>
         <div 
           ref={scrollContainerRef}
           onMouseDown={handleMouseDown}
@@ -310,35 +306,35 @@ const JournalPage: React.FC<JournalPageProps> = ({
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           onContextMenu={handleContextMenu}
-          className="overflow-x-auto scroll-smooth panning-container min-h-[500px]"
+          className="overflow-x-auto scroll-smooth panning-container h-full"
         >
           {filteredLessons.length > 0 || filteredStudents.length > 0 ? (
             <table className="w-full border-collapse table-fixed">
               <thead>
                 <tr className="bg-slate-50/70 journal-header-row">
-                  <th className="sticky left-0 z-30 bg-white border-b-2 border-r-2 border-slate-100 p-8 text-left w-[300px] shadow-[10px_0_15px_-10px_rgba(0,0,0,0.05)]">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs font-black uppercase tracking-widest text-indigo-600">Список учеников</span>
-                      <span className="text-[10px] font-bold text-slate-400">Всего {filteredStudents.length}</span>
+                  <th className="sticky left-0 z-30 bg-white border-b-2 border-r-2 border-slate-100 p-4 text-left w-[220px] shadow-[8px_0_12px_-8px_rgba(0,0,0,0.05)]">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Ученики</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">Всего: {filteredStudents.length}</span>
                     </div>
                   </th>
                   {filteredLessons.map(lesson => (
-                    <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-6 text-left w-[240px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
-                      <div className="flex flex-col gap-3 h-full overflow-hidden">
-                        <div className="flex justify-between items-center shrink-0">
-                          <span className="text-xl font-black text-slate-800">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
-                          <span className="text-[10px] font-black bg-white/80 px-2.5 py-1 rounded-lg border border-slate-200">{lesson.type}</span>
+                    <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-3 text-left w-[120px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
+                      <div className="flex flex-col gap-1.5 h-full overflow-hidden">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-black text-slate-800">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
+                          <span className="text-[8px] font-black bg-white/80 px-1.5 py-0.5 rounded border border-slate-200">{lesson.type}</span>
                         </div>
-                        <div className="text-[11px] font-medium italic text-slate-500 line-clamp-2 leading-snug">{lesson.topic || 'Без темы'}</div>
-                        <div className="text-[10px] text-slate-400 font-bold bg-white/40 p-2 rounded-xl border border-slate-200/50 mt-auto line-clamp-2">ДЗ: {lesson.homework || '—'}</div>
+                        <div className="text-[9px] font-medium italic text-slate-500 line-clamp-2 leading-tight h-6">{lesson.topic || '...'}</div>
+                        <div className="text-[8px] text-slate-400 font-bold bg-white/40 p-1 rounded-md border border-slate-200/50 mt-auto truncate">ДЗ: {lesson.homework || '—'}</div>
                       </div>
                     </th>
                   ))}
-                  <th className="bg-slate-900 border-b-2 border-black p-8 w-[140px] text-center shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.2)]">
-                    <span className="text-[11px] font-black uppercase tracking-widest text-white/40 block mb-1">Итог %</span>
+                  <th className="bg-slate-900 border-b-2 border-black p-4 w-[100px] text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.2)]">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Итог %</span>
                   </th>
-                  <th className="bg-indigo-600 border-b-2 border-indigo-700 p-8 w-[130px] text-center">
-                    <span className="text-[11px] font-black uppercase tracking-widest text-white block">Оценка</span>
+                  <th className="bg-indigo-600 border-b-2 border-indigo-700 p-4 w-[90px] text-center">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white block">Балл</span>
                   </th>
                 </tr>
               </thead>
@@ -347,20 +343,20 @@ const JournalPage: React.FC<JournalPageProps> = ({
                   const stats = calculateFinalStats(student.id);
                   return (
                     <tr key={student.id} className="hover:bg-slate-50/50 transition-colors journal-row group">
-                      <td className="sticky left-0 z-20 bg-white border-b border-r-2 border-slate-100 px-8 py-0 shadow-[10px_0_15px_-10px_rgba(0,0,0,0.05)] h-full">
-                        <div className="flex items-center justify-start h-full gap-5">
-                          <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner shrink-0">
-                            <Users size={20} />
+                      <td className="sticky left-0 z-20 bg-white border-b border-r-2 border-slate-100 px-4 py-0 shadow-[8px_0_12px_-8px_rgba(0,0,0,0.05)]">
+                        <div className="flex items-center gap-3 h-full">
+                          <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shrink-0">
+                            <Users size={14} />
                           </div>
                           <div className="flex flex-col justify-center min-w-0">
-                            <span className="text-[16px] font-black text-slate-800 leading-tight truncate">{student.lastName}</span>
-                            <span className="text-xs font-bold text-slate-400 leading-tight truncate">{student.firstName}</span>
+                            <span className="text-[13px] font-black text-slate-800 truncate">{student.lastName}</span>
+                            <span className="text-[10px] font-bold text-slate-400 truncate -mt-1">{student.firstName}</span>
                           </div>
                           <button 
                             onClick={() => navigate('/messages', { state: { targetId: student.id, type: 'student' } })}
-                            className="ml-auto opacity-0 group-hover:opacity-100 text-indigo-500 hover:scale-125 transition-all p-2 rounded-xl shrink-0 cursor-pointer"
+                            className="ml-auto opacity-0 group-hover:opacity-100 text-indigo-500 hover:scale-110 transition-all p-1 rounded-lg shrink-0 cursor-pointer"
                           >
-                            <Send size={16} />
+                            <Send size={12} />
                           </button>
                         </div>
                       </td>
@@ -375,9 +371,9 @@ const JournalPage: React.FC<JournalPageProps> = ({
                           />
                         );
                       })}
-                      <td className="bg-slate-50 border-b border-slate-100 p-0 text-center shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.02)] h-full">
+                      <td className="bg-slate-50 border-b border-slate-100 p-0 text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.02)] h-full">
                         <div className="flex items-center justify-center h-full">
-                          <span className={`text-xl font-black tracking-tight ${getPercentageColor(stats.totalPercent)}`}>
+                          <span className={`text-base font-black tracking-tight ${getPercentageColor(stats.totalPercent)}`}>
                             {stats.totalPercent}%
                           </span>
                         </div>
@@ -389,7 +385,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
                             value={stats.manualMark || ''} 
                             onChange={(e) => handleUpdateQuarterMark(student.id, e.target.value)}
                             placeholder=""
-                            className={`w-12 h-12 text-center text-xl font-black rounded-[1.25rem] border-2 outline-none transition-all ${getQuarterMarkColor(stats.manualMark)}`}
+                            className={`w-9 h-9 text-center text-base font-black rounded-lg border-2 outline-none transition-all ${getQuarterMarkColor(stats.manualMark)}`}
                           />
                         </div>
                       </td>
@@ -399,9 +395,9 @@ const JournalPage: React.FC<JournalPageProps> = ({
               </tbody>
             </table>
           ) : (
-            <div className="flex flex-col items-center justify-center h-[400px] text-slate-400">
-               <Calendar size={64} className="mb-4 opacity-10" />
-               <p className="font-bold text-lg">Уроки не найдены</p>
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 py-20">
+               <Calendar size={48} className="mb-4 opacity-10" />
+               <p className="font-bold">Уроки не найдены</p>
             </div>
           )}
         </div>

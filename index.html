@@ -18,25 +18,25 @@
       -webkit-backdrop-filter: blur(10px);
     }
     ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
     }
     ::-webkit-scrollbar-track {
       background: #f1f1f1;
     }
     ::-webkit-scrollbar-thumb {
       background: #cbd5e1;
-      border-radius: 4px;
+      border-radius: 10px;
     }
     ::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
     }
-    /* Исправленные стили для строк журнала */
+    /* Сжатые стили для лучшего обзора */
     .journal-row {
-      height: 70px !important;
+      height: 56px !important;
     }
     .journal-header-row {
-      height: 180px !important; /* Используем height вместо min-height для tr */
+      height: 120px !important;
     }
     .panning-active {
       user-select: none !important;
@@ -44,6 +44,14 @@
     }
     .panning-container {
       cursor: crosshair;
+    }
+    /* Плавное появление контента */
+    .fade-in {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 <script type="importmap">
@@ -61,7 +69,7 @@
 }
 </script>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="bg-slate-50 text-slate-900 overflow-hidden">
   <div id="root"></div>
   <script type="module" src="index.tsx"></script>
 </body>

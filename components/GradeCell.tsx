@@ -90,12 +90,12 @@ const GradeCellComponent: React.FC<GradeCellProps> = ({ grade, lesson, onUpdate 
             }
           }}
           placeholder=""
-          className={`w-11 h-11 text-center text-base font-black rounded-xl border-2 transition-all outline-none focus:ring-4 focus:ring-indigo-100 cursor-pointer ${finalStyle}`}
+          className={`w-9 h-9 text-center text-xs font-black rounded-lg border-2 transition-all outline-none focus:ring-2 focus:ring-indigo-100 cursor-pointer ${finalStyle}`}
         />
         
         {grade?.attendanceNote && (
-          <div className="absolute top-2 right-2 pointer-events-none">
-            <div className="w-2 h-2 bg-white rounded-full border border-black/10"></div>
+          <div className="absolute top-1 right-1 pointer-events-none">
+            <div className="w-1.5 h-1.5 bg-white rounded-full border border-black/10 shadow-sm"></div>
           </div>
         )}
       </div>
