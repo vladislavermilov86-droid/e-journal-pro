@@ -1,4 +1,3 @@
-
 import { LessonType } from './types.ts';
 
 export const LESSON_TYPE_COLORS: Record<LessonType, string> = {
@@ -53,16 +52,17 @@ export const getGradeColor = (points: number | null, maxPoints: number, type: Le
   // Универсальная логика по процентам для остальных случаев (например, тесты на 15, 20 баллов)
   const percent = (points / maxPoints) * 100;
   if (percent >= 86) return 'bg-green-600 text-white border-transparent shadow-sm';
-  if (percent >= 75) return 'bg-emerald-500 text-white border-transparent shadow-sm';
+  if (percent >= 66) return 'bg-emerald-500 text-white border-transparent shadow-sm';
   if (percent >= 30) return 'bg-orange-500 text-white border-transparent shadow-sm';
   return 'bg-red-600 text-white border-transparent shadow-sm';
 };
 
 export const getPercentageColor = (percent: number) => {
-  if (percent >= 86) return 'text-green-600'; // 5 (86-100%)
-  if (percent >= 75) return 'text-emerald-500'; // 4 (75-85%)
-  if (percent >= 30) return 'text-orange-500'; // 3 (30-74%)
-  return 'text-red-600'; // 2 (0-29%)
+  // Новая логика по запросу пользователя:
+  if (percent >= 86) return 'text-green-600'; // 100–86 % (как 10 зеленым)
+  if (percent >= 66) return 'text-emerald-500'; // 85–66 % (как 8 зеленым)
+  if (percent >= 30) return 'text-orange-500'; // 65–30 % (как 3 оранжевым)
+  return 'text-red-600'; // 29–0 % (как 2 красным)
 };
 
 export const getQuarterMarkColor = (mark: string | number | null) => {
