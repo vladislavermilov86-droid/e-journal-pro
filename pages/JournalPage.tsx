@@ -5,6 +5,7 @@ import {
   Plus, Send, Users, FileSpreadsheet, Calendar
 } from 'lucide-react';
 import { Class, Subject, Student, Lesson, GradeCell, Quarter, AttendanceStatus, LessonType } from '../types.ts';
+import { QuarterMark } from '../App.tsx';
 import { LESSON_TYPE_COLORS, getQuarterMarkColor, getPercentageColor } from '../constants.ts';
 import GradeCellComponent from '../components/GradeCell.tsx';
 import LessonModal from '../components/LessonModal.tsx';
@@ -16,15 +17,19 @@ interface JournalPageProps {
   lessons: Lesson[];
   grades: GradeCell[];
   quarters: Quarter[];
+  quarterMarks: QuarterMark[];
   setLessons: React.Dispatch<React.SetStateAction<Lesson[]>>;
   setGrades: React.Dispatch<React.SetStateAction<GradeCell[]>>;
+  setQuarterMarks: React.Dispatch<React.SetStateAction<QuarterMark[]>>;
   onGradeUpdate?: (grade: GradeCell) => Promise<void>;
+  onQuarterMarkUpdate?: (mark: QuarterMark) => Promise<void>;
   onLessonSave?: (lesson: Lesson, isDelete?: boolean) => Promise<void>;
 }
 
 const JournalPage: React.FC<JournalPageProps> = ({ 
-  classes, subjects, students, lessons, grades, quarters, setLessons, setGrades,
-  onGradeUpdate, onLessonSave
+  classes, subjects, students, lessons, grades, quarters, quarterMarks, 
+  setLessons, setGrades, setQuarterMarks,
+  onGradeUpdate, onQuarterMarkUpdate, onLessonSave
 }) => {
   const navigate = useNavigate();
   const [selectedClassId, setSelectedClassId] = useState<string>('');
@@ -102,9 +107,31 @@ const JournalPage: React.FC<JournalPageProps> = ({
     }
   };
 
-  const handleUpdateQuarterMark = (studentId: string, mark: string) => {
-    const lessonId = `quarter-${selectedQuarterId}`;
-    handleUpdateGrade(lessonId, studentId, parseInt(mark) || null, AttendanceStatus.PRESENT);
+  const handleUpdateQuarterMark = async (studentId: string, mark: string) => {
+    if (!selectedQuarterId) return;
+    
+    const markValue = parseInt(mark) || null;
+    const existingIdx = quarterMarks.findIndex(qm => qm.quarterId === selectedQuarterId && qm.studentId === studentId);
+    
+    const newMark: QuarterMark = {
+      id: existingIdx !== -1 ? quarterMarks[existingIdx].id : `qm-${selectedQuarterId}-${studentId}`,
+      quarterId: selectedQuarterId,
+      studentId,
+      mark: markValue
+    };
+
+    setQuarterMarks(prev => {
+      if (existingIdx !== -1) {
+        const next = [...prev];
+        next[existingIdx] = newMark;
+        return next;
+      }
+      return [...prev, newMark];
+    });
+
+    if (onQuarterMarkUpdate) {
+      await onQuarterMarkUpdate(newMark);
+    }
   };
 
   const calculateFinalStats = (studentId: string) => {
@@ -112,7 +139,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
     const quarterLessonIds = filteredLessons.map(l => l.id);
     const quarterGrades = studentGrades.filter(g => quarterLessonIds.includes(g.lessonId));
 
-    // 1. Расчет суммативных баллов (СОР/СОЧ) - балл = процент
+    // 1. Расчет суммативных баллов (СОР/СОЧ)
     let summativePoints = 0;
     const summativeLessons = filteredLessons.filter(l => l.type === LessonType.SOR || l.type === LessonType.SOCH);
     summativeLessons.forEach(l => {
@@ -122,7 +149,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
       }
     });
 
-    // 2. Расчет формативных оценок (ФО) - средний балл только если их 4+
+    // 2. Расчет формативных оценок (ФО)
     const formativeLessons = filteredLessons.filter(l => 
       l.type !== LessonType.SOR && l.type !== LessonType.SOCH
     );
@@ -135,14 +162,13 @@ const JournalPage: React.FC<JournalPageProps> = ({
     if (foGradesWithPoints.length >= 4) {
       const sumFO = foGradesWithPoints.reduce((acc, g) => acc + (g?.points ?? 0), 0);
       const avgFO = sumFO / foGradesWithPoints.length;
-      foContribution = Math.round(avgFO); // Округляем до ближайшего целого (9.1 -> 9, 9.5 -> 10)
+      foContribution = Math.round(avgFO); 
     }
 
-    // Итоговый процент = Сумма СОР/СОЧ + Вклад ФО
     const totalPercent = Math.min(100, summativePoints + foContribution);
     
-    const quarterLessonId = `quarter-${selectedQuarterId}`;
-    const manualMark = grades.find(g => g.studentId === studentId && g.lessonId === quarterLessonId)?.points;
+    // Берем ручную оценку из нового хранилища
+    const manualMark = quarterMarks.find(qm => qm.studentId === studentId && qm.quarterId === selectedQuarterId)?.mark;
 
     return { foPercent: foContribution, summativePercent: summativePoints, totalPercent, manualMark };
   };
@@ -193,17 +219,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
         maxPoints: lessonData.maxPoints || 10
       };
       setLessons(prev => [...prev, targetLesson]);
-    }
-
-    if (lessonData.date) {
-      const matchingQuarter = quarters.find(q => 
-        q.subjectId === selectedSubjectId && 
-        lessonData.date! >= q.startDate && 
-        lessonData.date! <= q.endDate
-      );
-      if (matchingQuarter && matchingQuarter.id !== selectedQuarterId) {
-        setSelectedQuarterId(matchingQuarter.id);
-      }
     }
 
     if (onLessonSave) {

@@ -73,6 +73,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
 
       await sql`
+        CREATE TABLE IF NOT EXISTS quarter_marks (
+          id TEXT PRIMARY KEY,
+          quarter_id TEXT REFERENCES quarters(id) ON DELETE CASCADE,
+          student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+          mark INTEGER,
+          UNIQUE(quarter_id, student_id)
+        )
+      `;
+
+      await sql`
         CREATE TABLE IF NOT EXISTS boards (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,

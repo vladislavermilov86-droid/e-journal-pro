@@ -21,6 +21,14 @@ import StatsPage from './pages/StatsPage.tsx';
 import SettingsPage from './pages/SettingsPage.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 
+// Тип для итоговой оценки
+export interface QuarterMark {
+  id: string;
+  quarterId: string;
+  studentId: string;
+  mark: number | null;
+}
+
 const apiRequest = async (endpoint: string, method: string = 'GET', body?: any) => {
   try {
     const response = await fetch(`/api/${endpoint}`, {
@@ -48,6 +56,7 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [quarters, setQuarters] = useState<Quarter[]>([]);
   const [scheduleRules, setScheduleRules] = useState<ScheduleRule[]>([]);
+  const [quarterMarks, setQuarterMarks] = useState<QuarterMark[]>([]);
 
   const loadAllData = useCallback(async () => {
     setIsSyncing(true);
@@ -72,12 +81,13 @@ const App: React.FC = () => {
         setQuarters(initialQuarters);
       } else {
         setMode('real');
-        const [st, sb, ls, gr, qt] = await Promise.all([
+        const [st, sb, ls, gr, qt, qm] = await Promise.all([
           apiRequest('students'),
           apiRequest('subjects'),
           apiRequest('lessons'),
           apiRequest('grades'),
-          apiRequest('quarters')
+          apiRequest('quarters'),
+          apiRequest('quarter_marks')
         ]);
         setClasses(resClasses);
         setStudents(st || []);
@@ -85,6 +95,7 @@ const App: React.FC = () => {
         setLessons(ls || []);
         setGrades(gr || []);
         setQuarters(qt || []);
+        setQuarterMarks(qm || []);
       }
     } catch (e) {
       setMode('error');
@@ -101,6 +112,10 @@ const App: React.FC = () => {
 
   const syncGrade = async (grade: GradeCell) => {
     await apiRequest('grades', 'POST', grade);
+  };
+
+  const syncQuarterMark = async (mark: QuarterMark) => {
+    await apiRequest('quarter_marks', 'POST', mark);
   };
 
   const syncLesson = async (lesson: Lesson, isDelete: boolean = false) => {
@@ -172,7 +187,23 @@ const App: React.FC = () => {
 
         <main className="flex-1 p-8 overflow-auto">
           <Routes>
-            <Route path="/journal" element={<JournalPage classes={classes} subjects={subjects} students={students} lessons={lessons} grades={grades} quarters={quarters} setLessons={setLessons} setGrades={setGrades} onGradeUpdate={syncGrade} onLessonSave={syncLesson} />} />
+            <Route path="/journal" element={
+              <JournalPage 
+                classes={classes} 
+                subjects={subjects} 
+                students={students} 
+                lessons={lessons} 
+                grades={grades} 
+                quarters={quarters} 
+                quarterMarks={quarterMarks}
+                setLessons={setLessons} 
+                setGrades={setGrades} 
+                setQuarterMarks={setQuarterMarks}
+                onGradeUpdate={syncGrade} 
+                onQuarterMarkUpdate={syncQuarterMark}
+                onLessonSave={syncLesson} 
+              />
+            } />
             <Route path="/classes" element={<ClassesPage classes={classes} students={students} setClasses={setClasses} setStudents={setStudents} />} />
             <Route path="/schedule" element={<SchedulePage subjects={subjects} classes={classes} lessons={lessons} rules={scheduleRules} setLessons={setLessons} setRules={setScheduleRules} />} />
             <Route path="/messages" element={<MessagesPage messages={messages} students={students} classes={classes} setMessages={setMessages} />} />
