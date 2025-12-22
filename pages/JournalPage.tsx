@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -41,6 +42,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
 
+  // Инициализация класса и предмета при загрузке
   useEffect(() => {
     if (!selectedClassId && classes.length > 0) {
       setSelectedClassId(classes[0].id);
@@ -50,16 +52,24 @@ const JournalPage: React.FC<JournalPageProps> = ({
     }
   }, [classes, subjects, selectedClassId, selectedSubjectId]);
 
+  // Строгая логика переключения четверти при смене предмета
   useEffect(() => {
-    if (!selectedQuarterId && quarters.length > 0 && selectedSubjectId) {
-      const relevant = quarters.find(q => q.subjectId === selectedSubjectId);
-      if (relevant) {
-        setSelectedQuarterId(relevant.id);
+    // Находим все четверти для текущего выбранного предмета
+    const relevantQuarters = quarters.filter(q => q.subjectId === selectedSubjectId);
+    
+    // Проверяем, валидна ли текущая выбранная четверть для этого предмета
+    const isCurrentQuarterValid = relevantQuarters.some(q => q.id === selectedQuarterId);
+
+    if (!isCurrentQuarterValid) {
+      if (relevantQuarters.length > 0) {
+        // Если есть четверти для этого предмета, выбираем первую (или текущую по дате, если усложнить)
+        setSelectedQuarterId(relevantQuarters[0].id);
       } else {
-        setSelectedQuarterId(quarters[0].id);
+        // Если четвертей нет, сбрасываем выбор
+        setSelectedQuarterId('');
       }
     }
-  }, [quarters, selectedSubjectId]);
+  }, [selectedSubjectId, quarters, selectedQuarterId]);
 
   // Глобальные слушатели для надежного панорамирования
   useEffect(() => {
@@ -162,6 +172,11 @@ const JournalPage: React.FC<JournalPageProps> = ({
   };
 
   const calculateFinalStats = (studentId: string) => {
+    // Если четверть не выбрана (например, для нового предмета их еще нет), возвращаем нули
+    if (!selectedQuarterId) {
+      return { foPercent: 0, summativePercent: 0, totalPercent: 0, manualMark: null };
+    }
+
     const studentGrades = grades.filter(g => g.studentId === studentId);
     const quarterLessonIds = filteredLessons.map(l => l.id);
     const quarterGrades = studentGrades.filter(g => quarterLessonIds.includes(g.lessonId));
@@ -191,6 +206,8 @@ const JournalPage: React.FC<JournalPageProps> = ({
     }
 
     const totalPercent = Math.min(100, summativePoints + foContribution);
+    
+    // Ищем оценку конкретно для ТЕКУЩЕЙ выбранной четверти
     const manualMark = quarterMarks.find(qm => qm.studentId === studentId && qm.quarterId === selectedQuarterId)?.mark;
 
     return { foPercent: foContribution, summativePercent: summativePoints, totalPercent, manualMark };
@@ -300,6 +317,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
           <div className="space-y-0.5">
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Четверть</label>
             <select value={selectedQuarterId} onChange={(e) => setSelectedQuarterId(e.target.value)} className="bg-slate-50 border-none rounded-xl px-4 py-2 text-xs font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
+              {quarters.filter(q => q.subjectId === selectedSubjectId).length === 0 && <option value="">Нет четвертей</option>}
               {quarters.filter(q => q.subjectId === selectedSubjectId).map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
             </select>
           </div>
@@ -402,7 +420,8 @@ const JournalPage: React.FC<JournalPageProps> = ({
                             value={stats.manualMark || ''} 
                             onChange={(e) => handleUpdateQuarterMark(student.id, e.target.value)}
                             placeholder=""
-                            className={`w-9 h-9 text-center text-base font-black rounded-lg border-2 outline-none transition-all ${getQuarterMarkColor(stats.manualMark)}`}
+                            disabled={!selectedQuarterId}
+                            className={`w-9 h-9 text-center text-base font-black rounded-lg border-2 outline-none transition-all ${!selectedQuarterId ? 'bg-slate-100 text-slate-300' : getQuarterMarkColor(stats.manualMark)}`}
                           />
                         </div>
                       </td>
