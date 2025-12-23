@@ -20,6 +20,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json(subject);
     }
 
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      if (id) {
+        await sql`DELETE FROM subjects WHERE id = ${id as string}`;
+        return res.status(200).json({ success: true });
+      }
+      return res.status(400).json({ message: 'Missing id parameter' });
+    }
+
     return res.status(405).json({ message: 'Method not allowed' });
   } catch (error: any) {
     return res.status(500).json({ message: error.message });

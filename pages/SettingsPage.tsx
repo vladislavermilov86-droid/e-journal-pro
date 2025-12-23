@@ -99,8 +99,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   const handleDeleteSubject = async (id: string) => {
-    if (!confirm('Удалить предмет? Это может повлиять на связанные уроки.')) return;
-    setSubjects(prev => prev.filter(s => s.id !== id));
+    if (!confirm('Удалить предмет? Это удалит все связанные четверти и уроки.')) return;
+    
+    const success = await apiCall('subjects', 'DELETE', undefined, `id=${id}`);
+    if (success) {
+      if (onDataRefresh) await onDataRefresh();
+      checkConnection();
+    } else if (!dbInfo.connected) {
+       setSubjects(prev => prev.filter(s => s.id !== id));
+    }
   };
 
   const handleAddQuarter = async () => {
