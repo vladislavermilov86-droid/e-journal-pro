@@ -344,31 +344,34 @@ const JournalPage: React.FC<JournalPageProps> = ({
           className={`w-full h-full overflow-auto panning-container ${isPanning ? '' : 'scroll-smooth'}`}
         >
           {filteredLessons.length > 0 || filteredStudents.length > 0 ? (
-            <table className="border-collapse table-fixed min-w-max" style={{ minWidth: 'max-content' }}>
+            <table 
+              className="border-collapse table-fixed" 
+              style={{ width: `${220 + 190 + (filteredLessons.length * 140)}px` }}
+            >
               <thead>
                 <tr className="bg-slate-50/70 journal-header-row">
-                  <th className="sticky left-0 z-30 bg-white border-b-2 border-r-2 border-slate-100 p-4 text-left w-[220px] shadow-[8px_0_12px_-8px_rgba(0,0,0,0.05)]">
+                  <th className="sticky left-0 z-30 bg-white border-b-2 border-r-2 border-slate-100 p-4 text-left w-[220px] min-w-[220px] max-w-[220px] shadow-[8px_0_12px_-8px_rgba(0,0,0,0.05)]">
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Ученики</span>
                       <span className="text-[9px] font-bold text-slate-400 uppercase">Всего: {filteredStudents.length}</span>
                     </div>
                   </th>
                   {filteredLessons.map(lesson => (
-                    <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-3 text-left w-[120px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
-                      <div className="flex flex-col gap-1.5 h-full overflow-hidden min-w-0">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-black text-slate-800">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
-                          <span className="text-[8px] font-black bg-white/80 px-1.5 py-0.5 rounded border border-slate-200">{lesson.type}</span>
+                    <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-3 text-left w-[140px] min-w-[140px] max-w-[140px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
+                      <div className="flex flex-col gap-1.5 h-full overflow-hidden w-full">
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-sm font-black text-slate-800 shrink-0">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
+                          <span className="text-[8px] font-black bg-white/80 px-1.5 py-0.5 rounded border border-slate-200 truncate ml-1">{lesson.type}</span>
                         </div>
-                        <div className="text-[9px] font-medium italic text-slate-500 line-clamp-2 leading-tight h-6 min-w-0">{lesson.topic || '...'}</div>
+                        <div className="text-[9px] font-medium italic text-slate-500 line-clamp-2 leading-tight h-6 w-full overflow-hidden">{lesson.topic || '...'}</div>
                         <div className="text-[8px] text-slate-400 font-bold bg-white/40 p-1 rounded-md border border-slate-200/50 mt-auto truncate w-full block" title={lesson.homework || ''}>ДЗ: {lesson.homework || '—'}</div>
                       </div>
                     </th>
                   ))}
-                  <th className="bg-slate-900 border-b-2 border-black p-4 w-[100px] text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.2)]">
+                  <th className="bg-slate-900 border-b-2 border-black p-4 w-[100px] min-w-[100px] max-w-[100px] text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.2)]">
                     <span className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Итог %</span>
                   </th>
-                  <th className="bg-indigo-600 border-b-2 border-indigo-700 p-4 w-[90px] text-center">
+                  <th className="bg-indigo-600 border-b-2 border-indigo-700 p-4 w-[90px] min-w-[90px] max-w-[90px] text-center">
                     <span className="text-[9px] font-black uppercase tracking-widest text-white block">Балл</span>
                   </th>
                 </tr>
@@ -378,7 +381,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
                   const stats = calculateFinalStats(student.id);
                   return (
                     <tr key={student.id} className="hover:bg-slate-50/50 transition-colors journal-row group">
-                      <td className="sticky left-0 z-20 bg-white border-b border-r-2 border-slate-100 px-4 py-0 shadow-[8px_0_12px_-8px_rgba(0,0,0,0.05)]">
+                      <td className="sticky left-0 z-20 bg-white border-b border-r-2 border-slate-100 px-4 py-0 shadow-[8px_0_12px_-8px_rgba(0,0,0,0.05)] w-[220px] min-w-[220px] max-w-[220px]">
                         <div className="flex items-center gap-3 h-full">
                           <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shrink-0">
                             <Users size={14} />
@@ -406,14 +409,14 @@ const JournalPage: React.FC<JournalPageProps> = ({
                           />
                         );
                       })}
-                      <td className="bg-slate-50 border-b border-slate-100 p-0 text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.02)] h-full">
+                      <td className="bg-slate-50 border-b border-slate-100 p-0 text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.02)] h-full w-[100px] min-w-[100px] max-w-[100px]">
                         <div className="flex items-center justify-center h-full">
                           <span className={`text-base font-black tracking-tight ${getPercentageColor(stats.totalPercent)}`}>
                             {stats.totalPercent}%
                           </span>
                         </div>
                       </td>
-                      <td className="bg-indigo-50/30 border-b border-slate-100 p-0 text-center h-full">
+                      <td className="bg-indigo-50/30 border-b border-slate-100 p-0 text-center h-full w-[90px] min-w-[90px] max-w-[90px]">
                         <div className="flex items-center justify-center h-full">
                           <input 
                             type="text" 
@@ -453,3 +456,4 @@ const JournalPage: React.FC<JournalPageProps> = ({
 };
 
 export default JournalPage;
+
