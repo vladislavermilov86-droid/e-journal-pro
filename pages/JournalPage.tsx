@@ -355,13 +355,13 @@ const JournalPage: React.FC<JournalPageProps> = ({
                   </th>
                   {filteredLessons.map(lesson => (
                     <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-3 text-left w-[120px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
-                      <div className="flex flex-col gap-1.5 h-full overflow-hidden">
+                      <div className="flex flex-col gap-1.5 h-full overflow-hidden min-w-0">
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-black text-slate-800">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
                           <span className="text-[8px] font-black bg-white/80 px-1.5 py-0.5 rounded border border-slate-200">{lesson.type}</span>
                         </div>
-                        <div className="text-[9px] font-medium italic text-slate-500 line-clamp-2 leading-tight h-6">{lesson.topic || '...'}</div>
-                        <div className="text-[8px] text-slate-400 font-bold bg-white/40 p-1 rounded-md border border-slate-200/50 mt-auto truncate">ДЗ: {lesson.homework || '—'}</div>
+                        <div className="text-[9px] font-medium italic text-slate-500 line-clamp-2 leading-tight h-6 min-w-0">{lesson.topic || '...'}</div>
+                        <div className="text-[8px] text-slate-400 font-bold bg-white/40 p-1 rounded-md border border-slate-200/50 mt-auto truncate w-full block" title={lesson.homework || ''}>ДЗ: {lesson.homework || '—'}</div>
                       </div>
                     </th>
                   ))}
