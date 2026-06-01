@@ -27,6 +27,7 @@ export interface QuarterMark {
   quarterId: string;
   studentId: string;
   mark: number | null;
+  examMark?: number | null;
 }
 
 const apiRequest = async (endpoint: string, method: string = 'GET', body?: any) => {

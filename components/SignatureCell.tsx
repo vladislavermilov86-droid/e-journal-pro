@@ -1,13 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { PenTool, X, Check, Eraser } from 'lucide-react';
-import { GradeCell } from '../types.ts';
 
 interface SignatureCellProps {
-  grade?: GradeCell;
+  signature?: string | null;
   onSave: (signature: string | null) => void;
 }
 
-const SignatureCell: React.FC<SignatureCellProps> = ({ grade, onSave }) => {
+const SignatureCell: React.FC<SignatureCellProps> = ({ signature, onSave }) => {
   const [open, setOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -90,18 +89,20 @@ const SignatureCell: React.FC<SignatureCellProps> = ({ grade, onSave }) => {
   return (
     <>
       <button 
-        onClick={() => setOpen(true)} 
-        className="w-full h-full flex items-center justify-center hover:bg-slate-100 transition-colors rounded-lg overflow-hidden p-1"
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }} 
+        className="w-full h-full flex items-center justify-center hover:bg-slate-100 transition-colors rounded-lg overflow-hidden p-1 min-h-[30px]"
       >
-        {grade?.signature ? (
-           <img src={grade.signature} alt="Sign" className="max-h-full max-w-full object-contain" />
+        {signature ? (
+           <img src={signature} alt="Sign" className="max-h-full max-w-full object-contain" />
         ) : (
            <PenTool size={16} className="text-slate-300 hover:text-indigo-500" />
         )}
       </button>
 
       {open && (
-         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+              onClick={(e) => e.stopPropagation()}
+         >
             <div className="bg-white p-6 rounded-[2rem] shadow-2xl w-[340px] flex flex-col items-center animate-in zoom-in-95 duration-150">
                <div className="w-full flex justify-between items-center mb-4">
                  <h3 className="font-black text-slate-800 text-lg">Подпись преподавателя</h3>

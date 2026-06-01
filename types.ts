@@ -45,6 +45,7 @@ export interface Lesson {
   topic: string;
   homework: string;
   maxPoints: number;
+  signature?: string;
 }
 
 export interface GradeCell {

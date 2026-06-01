@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -152,17 +153,19 @@ const JournalPage: React.FC<JournalPageProps> = ({
     }
   };
 
-  const handleUpdateQuarterMark = async (studentId: string, mark: string) => {
+  const handleUpdateQuarterMark = async (studentId: string, mark: string, isExam: boolean = false) => {
     if (!selectedQuarterId) return;
     
     const markValue = parseInt(mark) || null;
     const existingIdx = quarterMarks.findIndex(qm => qm.quarterId === selectedQuarterId && qm.studentId === studentId);
+    const existingMark = existingIdx !== -1 ? quarterMarks[existingIdx] : null;
     
     const newMark: QuarterMark = {
-      id: existingIdx !== -1 ? quarterMarks[existingIdx].id : `qm-${selectedQuarterId}-${studentId}`,
+      id: existingMark ? existingMark.id : `qm-${selectedQuarterId}-${studentId}`,
       quarterId: selectedQuarterId,
       studentId,
-      mark: markValue
+      mark: isExam ? (existingMark?.mark ?? null) : markValue,
+      examMark: isExam ? markValue : (existingMark?.examMark ?? null)
     };
 
     setQuarterMarks(prev => {
@@ -176,6 +179,14 @@ const JournalPage: React.FC<JournalPageProps> = ({
 
     if (onQuarterMarkUpdate) {
       await onQuarterMarkUpdate(newMark);
+    }
+  };
+
+  const handleUpdateLessonSignature = async (lesson: Lesson, signature: string | null) => {
+    const updatedLesson = { ...lesson, signature: signature || undefined };
+    setLessons(prev => prev.map(l => l.id === lesson.id ? updatedLesson : l));
+    if (onLessonSave) {
+      await onLessonSave(updatedLesson, false);
     }
   };
 
@@ -216,9 +227,11 @@ const JournalPage: React.FC<JournalPageProps> = ({
     const totalPercent = Math.min(100, summativePoints + foContribution);
     
     // Ищем оценку конкретно для ТЕКУЩЕЙ выбранной четверти
-    const manualMark = quarterMarks.find(qm => qm.studentId === studentId && qm.quarterId === selectedQuarterId)?.mark;
+    const qm = quarterMarks.find(qm => qm.studentId === studentId && qm.quarterId === selectedQuarterId);
+    const manualMark = qm?.mark;
+    const examMark = qm?.examMark;
 
-    return { foPercent: foContribution, summativePercent: summativePoints, totalPercent, manualMark };
+    return { foPercent: foContribution, summativePercent: summativePoints, totalPercent, manualMark, examMark };
   };
 
   const exportToExcel = () => {
@@ -241,6 +254,9 @@ const JournalPage: React.FC<JournalPageProps> = ({
         const stats = calculateFinalStats(student.id);
         row['Итог %'] = `${stats.totalPercent}%`;
         row['Оценка'] = stats.manualMark || '';
+        if (filteredLessons.some(l => l.type === LessonType.EXAM)) {
+          row['Итог экзамена'] = stats.examMark || '';
+        }
         return row;
       });
       const ws = XLSX.utils.json_to_sheet(data);
@@ -306,6 +322,10 @@ const JournalPage: React.FC<JournalPageProps> = ({
     }
   };
 
+  const regularLessons = useMemo(() => filteredLessons.filter(l => l.type !== LessonType.EXAM), [filteredLessons]);
+  const examLessons = useMemo(() => filteredLessons.filter(l => l.type === LessonType.EXAM), [filteredLessons]);
+  const hasExam = examLessons.length > 0;
+
   return (
     <div className={`space-y-4 h-full flex flex-col overflow-hidden ${isPanning ? 'panning-active' : ''}`}>
       <div className="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-slate-100 shrink-0">
@@ -354,7 +374,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
           {filteredLessons.length > 0 || filteredStudents.length > 0 ? (
             <table 
               className="border-collapse table-fixed" 
-              style={{ width: `${220 + 190 + (filteredLessons.length * 140) + (filteredLessons.filter(l => l.type === LessonType.EXAM).length * 50)}px` }}
+              style={{ width: `${220 + 90 + 100 + (regularLessons.length * 120) + (examLessons.length * 120) + (hasExam ? 100 : 0)}px` }}
             >
               <thead>
                 <tr className="bg-slate-50/70 journal-header-row">
@@ -364,41 +384,46 @@ const JournalPage: React.FC<JournalPageProps> = ({
                       <span className="text-[9px] font-bold text-slate-400 uppercase">Всего: {filteredStudents.length}</span>
                     </div>
                   </th>
-                  {filteredLessons.flatMap(lesson => {
-                    if (lesson.type === LessonType.EXAM) {
-                      return [
-                        <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-3 text-left w-[140px] min-w-[140px] max-w-[140px] cursor-pointer hover:bg-red-50 transition-all group ${LESSON_TYPE_COLORS[lesson.type]} border-b-red-500`}>
-                          <div className="flex flex-col gap-1.5 h-full overflow-hidden w-full items-center justify-center">
-                            <span className="text-sm font-black text-red-600 uppercase tracking-widest text-center mt-2">{lesson.type}</span>
-                            <div className="text-[9px] font-bold bg-white/60 text-red-500 px-2 py-1 rounded border border-red-200 mt-auto truncate w-full text-center block" title={lesson.topic || ''}>{lesson.topic || 'Без темы'}</div>
-                          </div>
-                        </th>,
-                        <th key={`${lesson.id}-sign`} className="border-b-2 border-r border-slate-100 p-2 text-center w-[50px] min-w-[50px] max-w-[50px] bg-red-50/30 border-b-red-500">
-                          <div className="text-[9px] font-black uppercase text-red-400 flex items-center justify-center h-full" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                            Подпись
-                          </div>
-                        </th>
-                      ];
-                    }
-                    return [
-                      <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-3 text-left w-[140px] min-w-[140px] max-w-[140px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
-                        <div className="flex flex-col gap-1.5 h-full overflow-hidden w-full">
-                          <div className="flex justify-between items-center w-full">
-                            <span className="text-sm font-black text-slate-800 shrink-0">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
-                            <span className="text-[8px] font-black bg-white/80 px-1.5 py-0.5 rounded border border-slate-200 truncate ml-1">{lesson.type}</span>
-                          </div>
-                          <div className="text-[9px] font-medium italic text-slate-500 line-clamp-2 leading-tight h-6 w-full overflow-hidden">{lesson.topic || '...'}</div>
-                          <div className="text-[8px] text-slate-400 font-bold bg-white/40 p-1 rounded-md border border-slate-200/50 mt-auto truncate w-full block" title={lesson.homework || ''}>ДЗ: {lesson.homework || '—'}</div>
+                  {regularLessons.map(lesson => (
+                    <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-3 text-left w-[120px] min-w-[120px] max-w-[120px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
+                      <div className="flex flex-col gap-1.5 h-full overflow-hidden w-full">
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-sm font-black text-slate-800 shrink-0">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
+                          <span className="text-[8px] font-black bg-white/80 px-1.5 py-0.5 rounded border border-slate-200 truncate ml-1">{lesson.type}</span>
                         </div>
-                      </th>
-                    ];
-                  })}
+                        <div className="text-[9px] font-medium italic text-slate-500 line-clamp-2 leading-tight h-6 w-full overflow-hidden">{lesson.topic || '...'}</div>
+                        <div className="text-[8px] text-slate-400 font-bold bg-white/40 p-1 rounded-md border border-slate-200/50 mt-auto truncate w-full block" title={lesson.homework || ''}>ДЗ: {lesson.homework || '—'}</div>
+                      </div>
+                    </th>
+                  ))}
                   <th className="bg-slate-900 border-b-2 border-black p-4 w-[100px] min-w-[100px] max-w-[100px] text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.2)]">
                     <span className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Итог %</span>
                   </th>
                   <th className="bg-indigo-600 border-b-2 border-indigo-700 p-4 w-[90px] min-w-[90px] max-w-[90px] text-center">
                     <span className="text-[9px] font-black uppercase tracking-widest text-white block">Балл</span>
                   </th>
+                  {examLessons.map(lesson => (
+                    <th key={lesson.id} className={`border-b-2 border-r border-slate-100 p-1 min-w-[120px] w-[120px] max-w-[120px] ${LESSON_TYPE_COLORS[lesson.type]} border-b-red-500 relative group`}>
+                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className="p-1 bg-white rounded shadow text-slate-500 hover:text-indigo-600">✎</button>
+                      </div>
+                      <div className="flex flex-col gap-1 h-full overflow-hidden w-full items-center justify-start p-1">
+                        <span className="text-xs font-black text-red-600 uppercase tracking-widest text-center mt-1">{lesson.type}</span>
+                        <div className="text-[9px] font-bold bg-white/60 text-red-500 px-1 py-0.5 rounded border border-red-200 truncate w-full text-center block mb-1" title={lesson.topic || ''}>{lesson.topic || 'Без темы'}</div>
+                        <div className="mt-auto w-full h-[40px]">
+                           <SignatureCell 
+                             signature={lesson.signature}
+                             onSave={(sig) => handleUpdateLessonSignature(lesson, sig)}
+                           />
+                        </div>
+                      </div>
+                    </th>
+                  ))}
+                  {hasExam && (
+                    <th className="bg-amber-50 border-b-2 border-amber-200 p-4 w-[100px] min-w-[100px] max-w-[100px] text-center">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-amber-700 block">Итог экзамена</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -423,32 +448,16 @@ const JournalPage: React.FC<JournalPageProps> = ({
                           </button>
                         </div>
                       </td>
-                      {filteredLessons.flatMap(lesson => {
+                      {regularLessons.map(lesson => {
                         const grade = grades.find(g => g.lessonId === lesson.id && g.studentId === student.id);
-                        if (lesson.type === LessonType.EXAM) {
-                          return [
-                            <GradeCellComponent 
-                              key={`${student.id}-${lesson.id}`}
-                              grade={grade}
-                              lesson={lesson}
-                              onUpdate={(p, a, n, c) => handleUpdateGrade(lesson.id, student.id, p, a, n, c)}
-                            />,
-                            <td key={`sign-${student.id}-${lesson.id}`} className="bg-red-50/10 border-b border-r border-slate-100 p-0 text-center h-full w-[50px] min-w-[50px] max-w-[50px]">
-                              <SignatureCell 
-                                grade={grade}
-                                onSave={(sig) => handleUpdateGrade(lesson.id, student.id, grade?.points ?? null, grade?.attendance ?? AttendanceStatus.PRESENT, grade?.attendanceNote, grade?.comment, sig)}
-                              />
-                            </td>
-                          ];
-                        }
-                        return [
+                        return (
                           <GradeCellComponent 
                             key={`${student.id}-${lesson.id}`}
                             grade={grade}
                             lesson={lesson}
                             onUpdate={(p, a, n, c) => handleUpdateGrade(lesson.id, student.id, p, a, n, c)}
                           />
-                        ];
+                        );
                       })}
                       <td className="bg-slate-50 border-b border-slate-100 p-0 text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.02)] h-full w-[100px] min-w-[100px] max-w-[100px]">
                         <div className="flex items-center justify-center h-full">
@@ -457,7 +466,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
                           </span>
                         </div>
                       </td>
-                      <td className="bg-indigo-50/30 border-b border-slate-100 p-0 text-center h-full w-[90px] min-w-[90px] max-w-[90px]">
+                      <td className="bg-indigo-50/30 border-b border-r border-slate-100 p-0 text-center h-full w-[90px] min-w-[90px] max-w-[90px]">
                         <div className="flex items-center justify-center h-full">
                           <input 
                             type="text" 
@@ -465,10 +474,35 @@ const JournalPage: React.FC<JournalPageProps> = ({
                             onChange={(e) => handleUpdateQuarterMark(student.id, e.target.value)}
                             placeholder=""
                             disabled={!selectedQuarterId}
-                            className={`w-9 h-9 text-center text-base font-black rounded-lg border-2 outline-none transition-all ${!selectedQuarterId ? 'bg-slate-100 text-slate-300' : getQuarterMarkColor(stats.manualMark)}`}
+                            className={`w-9 h-9 text-center text-base font-black rounded-lg border-2 outline-none transition-all ${!selectedQuarterId ? 'bg-slate-100 text-slate-300 border-transparent' : getQuarterMarkColor(stats.manualMark)}`}
                           />
                         </div>
                       </td>
+                      {examLessons.map(lesson => {
+                        const grade = grades.find(g => g.lessonId === lesson.id && g.studentId === student.id);
+                        return (
+                          <GradeCellComponent 
+                            key={`${student.id}-${lesson.id}`}
+                            grade={grade}
+                            lesson={lesson}
+                            onUpdate={(p, a, n, c) => handleUpdateGrade(lesson.id, student.id, p, a, n, c)}
+                          />
+                        );
+                      })}
+                      {hasExam && (
+                        <td className="bg-amber-50/50 border-b border-r border-amber-100 p-0 text-center h-full w-[100px] min-w-[100px] max-w-[100px]">
+                          <div className="flex items-center justify-center h-full">
+                            <input 
+                              type="text" 
+                              value={stats.examMark || ''} 
+                              onChange={(e) => handleUpdateQuarterMark(student.id, e.target.value, true)}
+                              placeholder=""
+                              disabled={!selectedQuarterId}
+                              className={`w-9 h-9 text-center text-base font-black rounded-lg border-2 outline-none transition-all focus:bg-white focus:border-amber-400 ${!selectedQuarterId ? 'bg-slate-100 text-slate-300 border-transparent' : getQuarterMarkColor(stats.examMark)}`}
+                            />
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
