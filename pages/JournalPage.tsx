@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -356,8 +355,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
             <table 
               className="border-collapse table-fixed" 
               style={{ width: `${220 + 190 + (filteredLessons.length * 140) + (filteredLessons.filter(l => l.type === LessonType.EXAM).length * 50)}px` }}
-              style={{ width: `${220 + 190 + (filteredLessons.length * 140)}px` }}
->>>>>>> f0765f1427959756f90531c38f757d7a776bc575
             >
               <thead>
                 <tr className="bg-slate-50/70 journal-header-row">
@@ -367,7 +364,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
                       <span className="text-[9px] font-bold text-slate-400 uppercase">Всего: {filteredStudents.length}</span>
                     </div>
                   </th>
-<<<<<<< HEAD
                   {filteredLessons.flatMap(lesson => {
                     if (lesson.type === LessonType.EXAM) {
                       return [
@@ -397,20 +393,6 @@ const JournalPage: React.FC<JournalPageProps> = ({
                       </th>
                     ];
                   })}
-=======
-                  {filteredLessons.map(lesson => (
-                    <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-3 text-left w-[140px] min-w-[140px] max-w-[140px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
-                      <div className="flex flex-col gap-1.5 h-full overflow-hidden w-full">
-                        <div className="flex justify-between items-center w-full">
-                          <span className="text-sm font-black text-slate-800 shrink-0">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
-                          <span className="text-[8px] font-black bg-white/80 px-1.5 py-0.5 rounded border border-slate-200 truncate ml-1">{lesson.type}</span>
-                        </div>
-                        <div className="text-[9px] font-medium italic text-slate-500 line-clamp-2 leading-tight h-6 w-full overflow-hidden">{lesson.topic || '...'}</div>
-                        <div className="text-[8px] text-slate-400 font-bold bg-white/40 p-1 rounded-md border border-slate-200/50 mt-auto truncate w-full block" title={lesson.homework || ''}>ДЗ: {lesson.homework || '—'}</div>
-                      </div>
-                    </th>
-                  ))}
->>>>>>> f0765f1427959756f90531c38f757d7a776bc575
                   <th className="bg-slate-900 border-b-2 border-black p-4 w-[100px] min-w-[100px] max-w-[100px] text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.2)]">
                     <span className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Итог %</span>
                   </th>
@@ -515,4 +497,3 @@ const JournalPage: React.FC<JournalPageProps> = ({
 };
 
 export default JournalPage;
-
