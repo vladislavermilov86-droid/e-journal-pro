@@ -77,7 +77,7 @@ const GradeCellComponent: React.FC<GradeCellProps> = ({ grade, lesson, onUpdate 
     : cellStyle;
 
   return (
-    <td className="border-b border-r border-slate-100 p-0 text-center relative journal-row">
+    <td className="border-b border-r border-slate-100 p-0 text-center relative journal-row w-[140px] min-w-[140px] max-w-[140px]">
       <div className="flex items-center justify-center h-full">
         <input
           ref={inputRef}
@@ -140,3 +140,4 @@ const GradeCellComponent: React.FC<GradeCellProps> = ({ grade, lesson, onUpdate 
 };
 
 export default GradeCellComponent;
+
