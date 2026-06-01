@@ -210,7 +210,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
     });
 
     const formativeLessons = filteredLessons.filter(l => 
-      l.type !== LessonType.SOR && l.type !== LessonType.SOCH
+      l.type !== LessonType.SOR && l.type !== LessonType.SOCH && l.type !== LessonType.EXAM
     );
     
     const foGradesWithPoints = formativeLessons
@@ -474,7 +474,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
                             onChange={(e) => handleUpdateQuarterMark(student.id, e.target.value)}
                             placeholder=""
                             disabled={!selectedQuarterId}
-                            className={`w-9 h-9 text-center text-base font-black rounded-lg border-2 outline-none transition-all ${!selectedQuarterId ? 'bg-slate-100 text-slate-300 border-transparent' : getQuarterMarkColor(stats.manualMark)}`}
+                            className={`w-9 h-9 text-center text-base font-black rounded-lg border-2 outline-none transition-all focus:bg-white focus:border-indigo-400 focus:text-slate-800 ${!selectedQuarterId ? 'bg-slate-100 text-slate-300 border-transparent' : getQuarterMarkColor(stats.manualMark)}`}
                           />
                         </div>
                       </td>
@@ -498,7 +498,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
                               onChange={(e) => handleUpdateQuarterMark(student.id, e.target.value, true)}
                               placeholder=""
                               disabled={!selectedQuarterId}
-                              className={`w-9 h-9 text-center text-base font-black rounded-lg border-2 outline-none transition-all focus:bg-white focus:border-amber-400 ${!selectedQuarterId ? 'bg-slate-100 text-slate-300 border-transparent' : getQuarterMarkColor(stats.examMark)}`}
+                              className={`w-9 h-9 text-center text-base font-black rounded-lg border-2 outline-none transition-all focus:bg-white focus:border-amber-400 focus:text-slate-800 ${!selectedQuarterId ? 'bg-slate-100 text-slate-300 border-transparent' : getQuarterMarkColor(stats.examMark)}`}
                             />
                           </div>
                         </td>
