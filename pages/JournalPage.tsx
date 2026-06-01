@@ -355,9 +355,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
           {filteredLessons.length > 0 || filteredStudents.length > 0 ? (
             <table 
               className="border-collapse table-fixed" 
-<<<<<<< HEAD
               style={{ width: `${220 + 190 + (filteredLessons.length * 140) + (filteredLessons.filter(l => l.type === LessonType.EXAM).length * 50)}px` }}
-=======
               style={{ width: `${220 + 190 + (filteredLessons.length * 140)}px` }}
 >>>>>>> f0765f1427959756f90531c38f757d7a776bc575
             >
