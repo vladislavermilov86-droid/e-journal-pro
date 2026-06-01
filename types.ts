@@ -55,6 +55,7 @@ export interface GradeCell {
   attendance: AttendanceStatus;
   attendanceNote?: string;
   comment?: string;
+  signature?: string;
 }
 
 export interface Message {

@@ -17,6 +17,14 @@ export const getGradeColor = (points: number | null, maxPoints: number, type: Le
   if (points === null) return 'bg-white text-slate-400 border-slate-100 hover:border-indigo-300';
   if (points === 0) return 'bg-slate-200 text-slate-500 border-transparent';
 
+  // Логика для Экзамена (от 0 до 100)
+  if (type === LessonType.EXAM || maxPoints === 100) {
+    if (points >= 86) return 'bg-green-600 text-white border-transparent shadow-sm'; // 5
+    if (points >= 59) return 'bg-emerald-500 text-white border-transparent shadow-sm'; // 4
+    if (points >= 25) return 'bg-orange-500 text-white border-transparent shadow-sm'; // 3
+    return 'bg-red-600 text-white border-transparent shadow-sm'; // 2
+  }
+
   // СОР 25 баллов
   if (type === LessonType.SOR && maxPoints === 25) {
     if (points >= 22) return 'bg-green-600 text-white border-transparent shadow-sm'; // 22-25 ярко-зеленый
@@ -79,7 +87,7 @@ export const DEFAULT_MAX_POINTS: Record<LessonType, number> = {
   [LessonType.SOR]: 25,
   [LessonType.SOCH]: 40,
   [LessonType.PROJECT]: 50,
-  [LessonType.EXAM]: 50,
+  [LessonType.EXAM]: 100,
   [LessonType.QUIZ]: 20,
   [LessonType.CLASSWORK]: 10,
   [LessonType.HOMEWORK]: 10,

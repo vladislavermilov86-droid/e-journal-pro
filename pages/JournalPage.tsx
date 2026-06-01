@@ -8,6 +8,7 @@ import { Class, Subject, Student, Lesson, GradeCell, Quarter, AttendanceStatus, 
 import { QuarterMark } from '../App.tsx';
 import { LESSON_TYPE_COLORS, getQuarterMarkColor, getPercentageColor } from '../constants.ts';
 import GradeCellComponent from '../components/GradeCell.tsx';
+import SignatureCell from '../components/SignatureCell.tsx';
 import LessonModal from '../components/LessonModal.tsx';
 
 interface JournalPageProps {
@@ -118,8 +119,15 @@ const JournalPage: React.FC<JournalPageProps> = ({
     return list.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [lessons, selectedClassId, selectedSubjectId, activeQuarter]);
 
-  const handleUpdateGrade = async (lessonId: string, studentId: string, points: number | null, attendance: AttendanceStatus, attendanceNote?: string, comment?: string) => {
+  const handleUpdateGrade = async (lessonId: string, studentId: string, points: number | null, attendance: AttendanceStatus, attendanceNote?: string, comment?: string, signature?: string | null) => {
     const existingIdx = grades.findIndex(g => g.lessonId === lessonId && g.studentId === studentId);
+    
+    // Preserve existing signature if not specifically overwritten
+    let finalSignature = signature;
+    if (signature === undefined && existingIdx !== -1) {
+      finalSignature = grades[existingIdx].signature || null;
+    }
+
     const newGrade: GradeCell = {
       id: existingIdx !== -1 ? grades[existingIdx].id : `g-${lessonId}-${studentId}`,
       lessonId,
@@ -127,7 +135,8 @@ const JournalPage: React.FC<JournalPageProps> = ({
       points,
       attendance,
       attendanceNote,
-      comment
+      comment,
+      signature: finalSignature || undefined
     };
     
     setGrades(prev => {
@@ -344,31 +353,51 @@ const JournalPage: React.FC<JournalPageProps> = ({
           className={`w-full h-full overflow-auto panning-container ${isPanning ? '' : 'scroll-smooth'}`}
         >
           {filteredLessons.length > 0 || filteredStudents.length > 0 ? (
-            <table className="border-collapse table-fixed min-w-max" style={{ minWidth: 'max-content' }}>
+            <table 
+              className="border-collapse table-fixed" 
+              style={{ width: `${220 + 190 + (filteredLessons.length * 140) + (filteredLessons.filter(l => l.type === LessonType.EXAM).length * 50)}px` }}
+            >
               <thead>
                 <tr className="bg-slate-50/70 journal-header-row">
-                  <th className="sticky left-0 z-30 bg-white border-b-2 border-r-2 border-slate-100 p-4 text-left w-[220px] shadow-[8px_0_12px_-8px_rgba(0,0,0,0.05)]">
+                  <th className="sticky left-0 z-30 bg-white border-b-2 border-r-2 border-slate-100 p-4 text-left w-[220px] min-w-[220px] max-w-[220px] shadow-[8px_0_12px_-8px_rgba(0,0,0,0.05)]">
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Ученики</span>
                       <span className="text-[9px] font-bold text-slate-400 uppercase">Всего: {filteredStudents.length}</span>
                     </div>
                   </th>
-                  {filteredLessons.map(lesson => (
-                    <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-3 text-left w-[120px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
-                      <div className="flex flex-col gap-1.5 h-full overflow-hidden">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-black text-slate-800">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
-                          <span className="text-[8px] font-black bg-white/80 px-1.5 py-0.5 rounded border border-slate-200">{lesson.type}</span>
+                  {filteredLessons.flatMap(lesson => {
+                    if (lesson.type === LessonType.EXAM) {
+                      return [
+                        <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-3 text-left w-[140px] min-w-[140px] max-w-[140px] cursor-pointer hover:bg-red-50 transition-all group ${LESSON_TYPE_COLORS[lesson.type]} border-b-red-500`}>
+                          <div className="flex flex-col gap-1.5 h-full overflow-hidden w-full items-center justify-center">
+                            <span className="text-sm font-black text-red-600 uppercase tracking-widest text-center mt-2">{lesson.type}</span>
+                            <div className="text-[9px] font-bold bg-white/60 text-red-500 px-2 py-1 rounded border border-red-200 mt-auto truncate w-full text-center block" title={lesson.topic || ''}>{lesson.topic || 'Без темы'}</div>
+                          </div>
+                        </th>,
+                        <th key={`${lesson.id}-sign`} className="border-b-2 border-r border-slate-100 p-2 text-center w-[50px] min-w-[50px] max-w-[50px] bg-red-50/30 border-b-red-500">
+                          <div className="text-[9px] font-black uppercase text-red-400 flex items-center justify-center h-full" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                            Подпись
+                          </div>
+                        </th>
+                      ];
+                    }
+                    return [
+                      <th key={lesson.id} onClick={() => { setEditingLesson(lesson); setIsLessonModalOpen(true); }} className={`border-b-2 border-r border-slate-100 p-3 text-left w-[140px] min-w-[140px] max-w-[140px] cursor-pointer hover:bg-white transition-all group ${LESSON_TYPE_COLORS[lesson.type]}`}>
+                        <div className="flex flex-col gap-1.5 h-full overflow-hidden w-full">
+                          <div className="flex justify-between items-center w-full">
+                            <span className="text-sm font-black text-slate-800 shrink-0">{new Date(lesson.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</span>
+                            <span className="text-[8px] font-black bg-white/80 px-1.5 py-0.5 rounded border border-slate-200 truncate ml-1">{lesson.type}</span>
+                          </div>
+                          <div className="text-[9px] font-medium italic text-slate-500 line-clamp-2 leading-tight h-6 w-full overflow-hidden">{lesson.topic || '...'}</div>
+                          <div className="text-[8px] text-slate-400 font-bold bg-white/40 p-1 rounded-md border border-slate-200/50 mt-auto truncate w-full block" title={lesson.homework || ''}>ДЗ: {lesson.homework || '—'}</div>
                         </div>
-                        <div className="text-[9px] font-medium italic text-slate-500 line-clamp-2 leading-tight h-6">{lesson.topic || '...'}</div>
-                        <div className="text-[8px] text-slate-400 font-bold bg-white/40 p-1 rounded-md border border-slate-200/50 mt-auto truncate">ДЗ: {lesson.homework || '—'}</div>
-                      </div>
-                    </th>
-                  ))}
-                  <th className="bg-slate-900 border-b-2 border-black p-4 w-[100px] text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.2)]">
+                      </th>
+                    ];
+                  })}
+                  <th className="bg-slate-900 border-b-2 border-black p-4 w-[100px] min-w-[100px] max-w-[100px] text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.2)]">
                     <span className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Итог %</span>
                   </th>
-                  <th className="bg-indigo-600 border-b-2 border-indigo-700 p-4 w-[90px] text-center">
+                  <th className="bg-indigo-600 border-b-2 border-indigo-700 p-4 w-[90px] min-w-[90px] max-w-[90px] text-center">
                     <span className="text-[9px] font-black uppercase tracking-widest text-white block">Балл</span>
                   </th>
                 </tr>
@@ -378,7 +407,7 @@ const JournalPage: React.FC<JournalPageProps> = ({
                   const stats = calculateFinalStats(student.id);
                   return (
                     <tr key={student.id} className="hover:bg-slate-50/50 transition-colors journal-row group">
-                      <td className="sticky left-0 z-20 bg-white border-b border-r-2 border-slate-100 px-4 py-0 shadow-[8px_0_12px_-8px_rgba(0,0,0,0.05)]">
+                      <td className="sticky left-0 z-20 bg-white border-b border-r-2 border-slate-100 px-4 py-0 shadow-[8px_0_12px_-8px_rgba(0,0,0,0.05)] w-[220px] min-w-[220px] max-w-[220px]">
                         <div className="flex items-center gap-3 h-full">
                           <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shrink-0">
                             <Users size={14} />
@@ -395,25 +424,41 @@ const JournalPage: React.FC<JournalPageProps> = ({
                           </button>
                         </div>
                       </td>
-                      {filteredLessons.map(lesson => {
+                      {filteredLessons.flatMap(lesson => {
                         const grade = grades.find(g => g.lessonId === lesson.id && g.studentId === student.id);
-                        return (
+                        if (lesson.type === LessonType.EXAM) {
+                          return [
+                            <GradeCellComponent 
+                              key={`${student.id}-${lesson.id}`}
+                              grade={grade}
+                              lesson={lesson}
+                              onUpdate={(p, a, n, c) => handleUpdateGrade(lesson.id, student.id, p, a, n, c)}
+                            />,
+                            <td key={`sign-${student.id}-${lesson.id}`} className="bg-red-50/10 border-b border-r border-slate-100 p-0 text-center h-full w-[50px] min-w-[50px] max-w-[50px]">
+                              <SignatureCell 
+                                grade={grade}
+                                onSave={(sig) => handleUpdateGrade(lesson.id, student.id, grade?.points ?? null, grade?.attendance ?? AttendanceStatus.PRESENT, grade?.attendanceNote, grade?.comment, sig)}
+                              />
+                            </td>
+                          ];
+                        }
+                        return [
                           <GradeCellComponent 
                             key={`${student.id}-${lesson.id}`}
                             grade={grade}
                             lesson={lesson}
                             onUpdate={(p, a, n, c) => handleUpdateGrade(lesson.id, student.id, p, a, n, c)}
                           />
-                        );
+                        ];
                       })}
-                      <td className="bg-slate-50 border-b border-slate-100 p-0 text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.02)] h-full">
+                      <td className="bg-slate-50 border-b border-slate-100 p-0 text-center shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.02)] h-full w-[100px] min-w-[100px] max-w-[100px]">
                         <div className="flex items-center justify-center h-full">
                           <span className={`text-base font-black tracking-tight ${getPercentageColor(stats.totalPercent)}`}>
                             {stats.totalPercent}%
                           </span>
                         </div>
                       </td>
-                      <td className="bg-indigo-50/30 border-b border-slate-100 p-0 text-center h-full">
+                      <td className="bg-indigo-50/30 border-b border-slate-100 p-0 text-center h-full w-[90px] min-w-[90px] max-w-[90px]">
                         <div className="flex items-center justify-center h-full">
                           <input 
                             type="text" 

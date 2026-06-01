@@ -68,6 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           attendance attendance_status DEFAULT 'Present',
           attendance_note TEXT,
           comment TEXT,
+          signature TEXT,
           UNIQUE(lesson_id, student_id)
         )
       `;
