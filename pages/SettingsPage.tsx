@@ -33,7 +33,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     name: '',
     subjectId: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    academicYear: '2025-2026'
   });
 
   useEffect(() => { 
@@ -289,9 +290,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             ) : (
               <div className="space-y-4 mb-8 bg-slate-50 p-6 rounded-3xl border border-slate-100">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Название</label>
                     <input type="text" placeholder="Напр: 3 Четверть" value={newQuarter.name} onChange={(e) => setNewQuarter({...newQuarter, name: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none" />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Учебный год</label>
+                    <input type="text" placeholder="2025-2026" value={newQuarter.academicYear || ''} onChange={(e) => setNewQuarter({...newQuarter, academicYear: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none" />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Предмет</label>
@@ -323,7 +328,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="flex items-center gap-2">
-                           <span className="font-black text-slate-800">{q.name}</span>
+                           <span className="font-black text-slate-800">{q.name} {q.academicYear ? `(${q.academicYear})` : ''}</span>
                            <span className="text-[10px] px-2 py-0.5 bg-white border border-slate-200 rounded-md font-bold text-slate-400 uppercase">{subject?.name || '???'}</span>
                         </div>
                         <p className="text-[11px] text-slate-500 font-medium mt-1">

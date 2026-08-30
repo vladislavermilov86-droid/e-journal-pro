@@ -142,11 +142,28 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
     }
   };
 
+  const handleToggleArchiveClass = async (id: string, currentIsArchived: boolean) => {
+    setIsSyncing(true);
+    const targetClass = classes.find(c => c.id === id);
+    if (!targetClass) return;
+    
+    const updatedClass = { ...targetClass, isArchived: !currentIsArchived };
+    const result = await apiRequest('classes', 'POST', updatedClass);
+    if (result) {
+      setClasses(prev => prev.map(c => c.id === id ? updatedClass : c));
+    }
+    setIsSyncing(false);
+  };
+
+  const activeClassesList = classes.filter(c => !c.isArchived);
+  const archivedClassesList = classes.filter(c => c.isArchived);
+  const [showArchivedClasses, setShowArchivedClasses] = useState(false);
+
   return (
     <div className="flex gap-8 h-full">
       {/* Sidebar with Classes */}
-      <div className="w-80 space-y-4">
-        <div className="flex items-center justify-between mb-2">
+      <div className="w-80 space-y-4 flex flex-col h-full">
+        <div className="flex items-center justify-between mb-2 shrink-0">
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Мои классы</h2>
             {isSyncing && <RefreshCw size={14} className="animate-spin text-indigo-500" />}
@@ -161,7 +178,7 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
         </div>
 
         {isAddingClass && (
-          <div className="p-4 bg-white rounded-2xl shadow-lg border border-indigo-100 animate-in slide-in-from-top-2 duration-200">
+          <div className="p-4 bg-white rounded-2xl shadow-lg border border-indigo-100 animate-in slide-in-from-top-2 duration-200 shrink-0">
             <input 
               autoFocus
               className="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none mb-2"
@@ -180,8 +197,8 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
           </div>
         )}
 
-        <div className="space-y-2">
-          {classes.map(c => (
+        <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+          {activeClassesList.map(c => (
             <div 
               key={c.id}
               onClick={() => !isSyncing && setActiveClassId(c.id)}
@@ -195,15 +212,76 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
                 <Users size={20} />
                 <span className="font-bold">{c.name}</span>
               </div>
-              <button 
-                onClick={(e) => { e.stopPropagation(); handleDeleteClass(c.id); }}
-                className={`opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all ${activeClassId === c.id ? 'hover:bg-indigo-500' : 'hover:bg-red-50 text-red-500'}`}
-                disabled={isSyncing}
-              >
-                <Trash2 size={16} />
-              </button>
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  title="Архивировать"
+                  onClick={(e) => { e.stopPropagation(); handleToggleArchiveClass(c.id, !!c.isArchived); }}
+                  className={`p-1 rounded-lg transition-all ${activeClassId === c.id ? 'hover:bg-indigo-500 text-white' : 'hover:bg-amber-50 text-amber-500'}`}
+                  disabled={isSyncing}
+                >
+                  <RefreshCw size={14} />
+                </button>
+                <button 
+                  title="Удалить"
+                  onClick={(e) => { e.stopPropagation(); handleDeleteClass(c.id); }}
+                  className={`p-1 rounded-lg transition-all ${activeClassId === c.id ? 'hover:bg-indigo-500 text-white' : 'hover:bg-red-50 text-red-500'}`}
+                  disabled={isSyncing}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
           ))}
+
+          {archivedClassesList.length > 0 && (
+            <div className="pt-4 mt-4 border-t border-slate-100">
+              <button 
+                onClick={() => setShowArchivedClasses(!showArchivedClasses)}
+                className="w-full text-left px-2 py-1 text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600 mb-2 transition-colors"
+              >
+                Архив ({archivedClassesList.length}) {showArchivedClasses ? '▼' : '▶'}
+              </button>
+              
+              {showArchivedClasses && (
+                <div className="space-y-2">
+                  {archivedClassesList.map(c => (
+                    <div 
+                      key={c.id}
+                      onClick={() => !isSyncing && setActiveClassId(c.id)}
+                      className={`p-3 rounded-xl cursor-pointer flex items-center justify-between group transition-all ${
+                        activeClassId === c.id 
+                          ? 'bg-slate-700 text-white shadow-md scale-[1.02]' 
+                          : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200'
+                      } ${isSyncing ? 'pointer-events-none opacity-80' : ''}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Users size={16} />
+                        <span className="font-bold text-sm">{c.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          title="Восстановить"
+                          onClick={(e) => { e.stopPropagation(); handleToggleArchiveClass(c.id, !!c.isArchived); }}
+                          className="p-1 rounded-md hover:bg-emerald-100 text-emerald-600 transition-colors"
+                          disabled={isSyncing}
+                        >
+                          <RefreshCw size={14} />
+                        </button>
+                        <button 
+                          title="Удалить"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteClass(c.id); }}
+                          className="p-1 rounded-md hover:bg-red-100 text-red-500 transition-colors"
+                          disabled={isSyncing}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

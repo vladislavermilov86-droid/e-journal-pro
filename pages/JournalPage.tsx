@@ -346,7 +346,11 @@ const JournalPage: React.FC<JournalPageProps> = ({
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Четверть</label>
             <select value={selectedQuarterId} onChange={(e) => setSelectedQuarterId(e.target.value)} className="bg-slate-50 border-none rounded-xl px-4 py-2 text-xs font-black text-slate-700 outline-none hover:bg-slate-100 transition-colors cursor-pointer">
               {quarters.filter(q => q.subjectId === selectedSubjectId).length === 0 && <option value="">Нет четвертей</option>}
-              {quarters.filter(q => q.subjectId === selectedSubjectId).map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
+              {quarters.filter(q => q.subjectId === selectedSubjectId).map(q => (
+                <option key={q.id} value={q.id}>
+                  {q.name} {q.academicYear ? `(${q.academicYear})` : ''}
+                </option>
+              ))}
             </select>
           </div>
         </div>

@@ -29,6 +29,7 @@ export interface Student {
 export interface Class {
   id: string;
   name: string;
+  isArchived?: boolean;
 }
 
 export interface Subject {
@@ -74,6 +75,7 @@ export interface Quarter {
   name: string;
   startDate: string;
   endDate: string;
+  academicYear?: string;
 }
 
 export interface ScheduleRule {

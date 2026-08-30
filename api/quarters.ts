@@ -4,9 +4,15 @@ import sql from './db.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
+    try {
+      await sql`ALTER TABLE quarters ADD COLUMN IF NOT EXISTS academic_year TEXT;`;
+    } catch (e) {
+      // ignore
+    }
+
     if (req.method === 'GET') {
       const quarters = await sql`
-        SELECT id, subject_id as "subjectId", name, start_date::text as "startDate", end_date::text as "endDate"
+        SELECT id, subject_id as "subjectId", name, start_date::text as "startDate", end_date::text as "endDate", academic_year as "academicYear"
         FROM quarters
         ORDER BY start_date ASC
       `;
@@ -14,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'POST') {
-      const { id, subjectId, name, startDate, endDate } = req.body;
+      const { id, subjectId, name, startDate, endDate, academicYear } = req.body;
 
       if (!id || !subjectId || !name || !startDate || !endDate) {
         return res.status(400).json({ message: 'Все поля (id, subjectId, name, startDate, endDate) обязательны' });
@@ -30,14 +36,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const [quarter] = await sql`
-        INSERT INTO quarters (id, subject_id, name, start_date, end_date)
-        VALUES (${id}, ${subjectId}, ${name}, ${startDate}, ${endDate})
+        INSERT INTO quarters (id, subject_id, name, start_date, end_date, academic_year)
+        VALUES (${id}, ${subjectId}, ${name}, ${startDate}, ${endDate}, ${academicYear || null})
         ON CONFLICT (id) DO UPDATE SET
           subject_id = ${subjectId},
           name = ${name},
           start_date = ${startDate},
-          end_date = ${endDate}
-        RETURNING id, subject_id as "subjectId", name, start_date::text as "startDate", end_date::text as "endDate"
+          end_date = ${endDate},
+          academic_year = ${academicYear || null}
+        RETURNING id, subject_id as "subjectId", name, start_date::text as "startDate", end_date::text as "endDate", academic_year as "academicYear"
       `;
       return res.status(200).json(quarter);
     }
