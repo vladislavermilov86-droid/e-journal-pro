@@ -119,11 +119,17 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
     for (const studentId of selectedStudentsToTransfer) {
       const studentToMove = students.find(s => s.id === studentId);
       if (studentToMove) {
-        const updatedStudent = { ...studentToMove, classId: transferTargetClass };
-        const result = await apiRequest('students', 'POST', updatedStudent);
+        const newId = Math.random().toString(36).substr(2, 9);
+        const copiedStudent = { 
+          ...studentToMove, 
+          id: newId,
+          classId: transferTargetClass,
+          studentId: studentToMove.studentId ? `${studentToMove.studentId}_${newId}` : '' 
+        };
+        const result = await apiRequest('students', 'POST', copiedStudent);
         if (result) {
           successCount++;
-          setStudents(prev => prev.map(s => s.id === studentId ? updatedStudent : s));
+          setStudents(prev => [...prev, copiedStudent]);
         }
       }
     }
@@ -132,7 +138,7 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
     setIsTransferring(false);
     setSelectedStudentsToTransfer([]);
     if (successCount > 0) {
-      alert(`Успешно переведено учеников: ${successCount}`);
+      alert(`Успешно скопировано учеников: ${successCount}. Они теперь есть и в текущем, и в новом классе.`);
     }
   };
 
@@ -217,7 +223,7 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
               className="flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-700 rounded-2xl font-bold hover:bg-slate-200 transition-all disabled:opacity-50"
               disabled={!activeClassId || isSyncing || activeClassStudents.length === 0}
             >
-              Перевести
+              Скопировать в другой класс
             </button>
             <button 
               onClick={() => setIsAddingStudent(true)}
@@ -233,10 +239,10 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
         <div className="p-8 flex-1 overflow-auto">
           {isTransferring && (
             <div className="mb-8 p-6 bg-slate-50 rounded-3xl border-2 border-indigo-200 animate-in fade-in duration-300">
-              <h3 className="text-lg font-black text-slate-800 mb-4">Перевод учеников в другой класс</h3>
+              <h3 className="text-lg font-black text-slate-800 mb-4">Копирование учеников в другой класс (перевод)</h3>
               <div className="flex gap-4 items-end mb-6">
                 <div className="flex-1">
-                  <label className="block text-sm font-bold text-slate-600 mb-2">Выберите класс для перевода:</label>
+                  <label className="block text-sm font-bold text-slate-600 mb-2">Выберите класс для перевода (копирования):</label>
                   <select 
                     value={transferTargetClass}
                     onChange={(e) => setTransferTargetClass(e.target.value)}
@@ -254,7 +260,7 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
                   disabled={isSyncing || !transferTargetClass} 
                   className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50"
                 >
-                  {isSyncing ? 'Перевод...' : 'Перевести выбранных'}
+                  {isSyncing ? 'Копирование...' : 'Скопировать выбранных'}
                 </button>
                 <button 
                   onClick={() => setIsTransferring(false)} 
@@ -265,7 +271,7 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 <div className="flex justify-between items-center px-2 mb-2">
-                  <span className="text-sm font-bold text-slate-500">Ученики для перевода:</span>
+                  <span className="text-sm font-bold text-slate-500">Ученики для копирования:</span>
                   <button 
                     onClick={() => {
                       if (selectedStudentsToTransfer.length === activeClassStudents.length) {
