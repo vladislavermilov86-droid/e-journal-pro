@@ -19,6 +19,10 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [newStudent, setNewStudent] = useState({ firstName: '', lastName: '', studentId: '' });
 
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [transferTargetClass, setTransferTargetClass] = useState('');
+  const [selectedStudentsToTransfer, setSelectedStudentsToTransfer] = useState<string[]>([]);
+
   const activeClassStudents = students.filter(s => s.classId === activeClassId);
 
   const apiRequest = async (endpoint: string, method: string, body?: any) => {
@@ -98,6 +102,40 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
     setIsSyncing(false);
   };
 
+  const handleTransferStudents = async () => {
+    if (!transferTargetClass) {
+      alert('Выберите класс для перевода');
+      return;
+    }
+    if (selectedStudentsToTransfer.length === 0) {
+      alert('Выберите хотя бы одного ученика');
+      return;
+    }
+    if (!confirm(`Перевести ${selectedStudentsToTransfer.length} учеников в выбранный класс?`)) return;
+
+    setIsSyncing(true);
+    let successCount = 0;
+    
+    for (const studentId of selectedStudentsToTransfer) {
+      const studentToMove = students.find(s => s.id === studentId);
+      if (studentToMove) {
+        const updatedStudent = { ...studentToMove, classId: transferTargetClass };
+        const result = await apiRequest('students', 'POST', updatedStudent);
+        if (result) {
+          successCount++;
+          setStudents(prev => prev.map(s => s.id === studentId ? updatedStudent : s));
+        }
+      }
+    }
+    
+    setIsSyncing(false);
+    setIsTransferring(false);
+    setSelectedStudentsToTransfer([]);
+    if (successCount > 0) {
+      alert(`Успешно переведено учеников: ${successCount}`);
+    }
+  };
+
   return (
     <div className="flex gap-8 h-full">
       {/* Sidebar with Classes */}
@@ -170,17 +208,98 @@ const ClassesPage: React.FC<ClassesPageProps> = ({ classes, students, setClasses
             <h2 className="text-2xl font-black text-slate-800">Список учеников</h2>
             <p className="text-slate-400 font-medium">Управление составом класса {classes.find(c => c.id === activeClassId)?.name}</p>
           </div>
-          <button 
-            onClick={() => setIsAddingStudent(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50"
-            disabled={!activeClassId || isSyncing}
-          >
-            <UserPlus size={20} />
-            Добавить ученика
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => {
+                setIsTransferring(true);
+                setSelectedStudentsToTransfer(activeClassStudents.map(s => s.id));
+              }}
+              className="flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-700 rounded-2xl font-bold hover:bg-slate-200 transition-all disabled:opacity-50"
+              disabled={!activeClassId || isSyncing || activeClassStudents.length === 0}
+            >
+              Перевести
+            </button>
+            <button 
+              onClick={() => setIsAddingStudent(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50"
+              disabled={!activeClassId || isSyncing}
+            >
+              <UserPlus size={20} />
+              Добавить ученика
+            </button>
+          </div>
         </div>
 
         <div className="p-8 flex-1 overflow-auto">
+          {isTransferring && (
+            <div className="mb-8 p-6 bg-slate-50 rounded-3xl border-2 border-indigo-200 animate-in fade-in duration-300">
+              <h3 className="text-lg font-black text-slate-800 mb-4">Перевод учеников в другой класс</h3>
+              <div className="flex gap-4 items-end mb-6">
+                <div className="flex-1">
+                  <label className="block text-sm font-bold text-slate-600 mb-2">Выберите класс для перевода:</label>
+                  <select 
+                    value={transferTargetClass}
+                    onChange={(e) => setTransferTargetClass(e.target.value)}
+                    className="w-full p-3 border rounded-xl outline-none font-medium"
+                    disabled={isSyncing}
+                  >
+                    <option value="">-- Выберите класс --</option>
+                    {classes.filter(c => c.id !== activeClassId).map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button 
+                  onClick={handleTransferStudents} 
+                  disabled={isSyncing || !transferTargetClass} 
+                  className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50"
+                >
+                  {isSyncing ? 'Перевод...' : 'Перевести выбранных'}
+                </button>
+                <button 
+                  onClick={() => setIsTransferring(false)} 
+                  className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-bold"
+                >
+                  Отмена
+                </button>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                <div className="flex justify-between items-center px-2 mb-2">
+                  <span className="text-sm font-bold text-slate-500">Ученики для перевода:</span>
+                  <button 
+                    onClick={() => {
+                      if (selectedStudentsToTransfer.length === activeClassStudents.length) {
+                        setSelectedStudentsToTransfer([]);
+                      } else {
+                        setSelectedStudentsToTransfer(activeClassStudents.map(s => s.id));
+                      }
+                    }}
+                    className="text-sm text-indigo-600 font-bold"
+                  >
+                    {selectedStudentsToTransfer.length === activeClassStudents.length ? 'Снять все' : 'Выбрать все'}
+                  </button>
+                </div>
+                {activeClassStudents.map(s => (
+                  <label key={s.id} className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50">
+                    <input 
+                      type="checkbox"
+                      checked={selectedStudentsToTransfer.includes(s.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedStudentsToTransfer(prev => [...prev, s.id]);
+                        } else {
+                          setSelectedStudentsToTransfer(prev => prev.filter(id => id !== s.id));
+                        }
+                      }}
+                      className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+                    />
+                    <span className="font-medium text-slate-700">{s.lastName} {s.firstName}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
           {isAddingStudent && (
             <div className="mb-8 p-6 bg-slate-50 rounded-3xl border-2 border-dashed border-indigo-200 grid grid-cols-3 gap-4 animate-in fade-in duration-300">
                <input 
