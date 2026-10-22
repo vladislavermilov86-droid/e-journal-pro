@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Subject, Class, Quarter } from '../types';
 import { 
   Plus, Trash2, Database, Zap, CheckCircle, AlertCircle, 
-  RefreshCw, FileText, CloudIcon, Info, Book, Calendar, Edit3
+  RefreshCw, FileText, CloudIcon, Info, Book, Calendar, Edit3,
+  Pencil, Check, X
 } from 'lucide-react';
 import { initialClasses, initialStudents, initialSubjects, initialLessons, initialGrades, initialQuarters } from '../mockData';
 
@@ -36,6 +37,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     endDate: '',
     academicYear: '2025-2026'
   });
+
+  const [editingQuarterId, setEditingQuarterId] = useState<string | null>(null);
+  const [editQuarterData, setEditQuarterData] = useState<{
+    id: string;
+    name: string;
+    subjectId: string;
+    startDate: string;
+    endDate: string;
+    academicYear: string;
+  } | null>(null);
+  const [isSavingQuarter, setIsSavingQuarter] = useState<boolean>(false);
 
   useEffect(() => { 
     checkConnection(); 
@@ -145,6 +157,59 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     } else {
       setQuarters(prev => prev.filter(q => q.id !== id));
     }
+  };
+
+  const handleStartEditQuarter = (q: Quarter) => {
+    setEditingQuarterId(q.id);
+    setEditQuarterData({
+      id: q.id,
+      name: q.name,
+      subjectId: q.subjectId,
+      startDate: q.startDate ? q.startDate.split('T')[0] : '',
+      endDate: q.endDate ? q.endDate.split('T')[0] : '',
+      academicYear: q.academicYear || ''
+    });
+  };
+
+  const handleCancelEditQuarter = () => {
+    setEditingQuarterId(null);
+    setEditQuarterData(null);
+  };
+
+  const handleSaveQuarter = async () => {
+    if (!editQuarterData) return;
+    if (!editQuarterData.name.trim() || !editQuarterData.subjectId || !editQuarterData.startDate || !editQuarterData.endDate) {
+      alert('Пожалуйста, заполните все обязательные поля (название, предмет, дату начала и окончания)');
+      return;
+    }
+
+    if (editQuarterData.startDate > editQuarterData.endDate) {
+      alert('Дата начала четверти не может быть позже даты окончания');
+      return;
+    }
+
+    setIsSavingQuarter(true);
+    const updatedQuarter: Quarter = {
+      id: editQuarterData.id,
+      name: editQuarterData.name.trim(),
+      subjectId: editQuarterData.subjectId,
+      startDate: editQuarterData.startDate,
+      endDate: editQuarterData.endDate,
+      academicYear: editQuarterData.academicYear?.trim() || undefined
+    };
+
+    const success = await apiCall('quarters', 'POST', updatedQuarter);
+    if (success) {
+      if (onDataRefresh) await onDataRefresh();
+      setQuarters(prev => prev.map(q => q.id === updatedQuarter.id ? updatedQuarter : q));
+      setEditingQuarterId(null);
+      setEditQuarterData(null);
+    } else if (!dbInfo.connected) {
+      setQuarters(prev => prev.map(q => q.id === updatedQuarter.id ? updatedQuarter : q));
+      setEditingQuarterId(null);
+      setEditQuarterData(null);
+    }
+    setIsSavingQuarter(false);
   };
 
   const handleInitDB = async () => {
@@ -317,25 +382,132 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               </div>
             )}
 
-            <div className="space-y-3 overflow-y-auto max-h-[300px] pr-2">
+            <div className="space-y-3 overflow-y-auto max-h-[500px] pr-2">
               {quarters.length === 0 && (
                 <p className="text-center py-10 text-slate-400 font-medium italic">Четверти не созданы</p>
               )}
               {quarters.map(q => {
                 const subject = subjects.find(s => s.id === q.subjectId);
-                return (
-                  <div key={q.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 group">
-                    <div className="flex justify-between items-start">
-                      <div>
+                const isEditing = editingQuarterId === q.id;
+
+                if (isEditing && editQuarterData) {
+                  return (
+                    <div key={q.id} className="p-5 bg-indigo-50/70 rounded-2xl border-2 border-indigo-300 shadow-md space-y-4 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
+                          <Pencil size={16} className="text-indigo-600" />
+                          <span className="font-black text-xs text-indigo-900 uppercase tracking-wider">Редактирование четверти</span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 font-medium">Уроки не сотрутся!</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="col-span-1">
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Название</label>
+                          <input 
+                            type="text" 
+                            value={editQuarterData.name}
+                            onChange={(e) => setEditQuarterData({ ...editQuarterData, name: e.target.value })}
+                            placeholder="Напр: 1 Четверть"
+                            className="w-full px-3 py-2 bg-white rounded-xl border border-indigo-200 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+
+                        <div className="col-span-1">
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Учебный год</label>
+                          <input 
+                            type="text" 
+                            value={editQuarterData.academicYear}
+                            onChange={(e) => setEditQuarterData({ ...editQuarterData, academicYear: e.target.value })}
+                            placeholder="2025-2026"
+                            className="w-full px-3 py-2 bg-white rounded-xl border border-indigo-200 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Предмет</label>
+                          <select 
+                            value={editQuarterData.subjectId}
+                            onChange={(e) => setEditQuarterData({ ...editQuarterData, subjectId: e.target.value })}
+                            className="w-full px-3 py-2 bg-white rounded-xl border border-indigo-200 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            {subjects.map(s => (
+                              <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Дата начала</label>
+                          <input 
+                            type="date" 
+                            value={editQuarterData.startDate}
+                            onChange={(e) => setEditQuarterData({ ...editQuarterData, startDate: e.target.value })}
+                            className="w-full px-3 py-2 bg-white rounded-xl border border-indigo-200 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Дата окончания</label>
+                          <input 
+                            type="date" 
+                            value={editQuarterData.endDate}
+                            onChange={(e) => setEditQuarterData({ ...editQuarterData, endDate: e.target.value })}
+                            className="w-full px-3 py-2 bg-white rounded-xl border border-indigo-200 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 pt-1">
+                        <button 
+                          onClick={handleSaveQuarter}
+                          disabled={isSavingQuarter}
+                          className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                        >
+                          {isSavingQuarter ? <RefreshCw size={16} className="animate-spin" /> : <Check size={16} />}
+                          Сохранить
+                        </button>
+                        <button 
+                          onClick={handleCancelEditQuarter}
+                          disabled={isSavingQuarter}
+                          className="py-2.5 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-sm flex items-center justify-center gap-1 transition-all"
+                        >
+                          <X size={16} />
+                          Отмена
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={q.id} className="p-4 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-100 group transition-all">
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
                            <span className="font-black text-slate-800">{q.name} {q.academicYear ? `(${q.academicYear})` : ''}</span>
-                           <span className="text-[10px] px-2 py-0.5 bg-white border border-slate-200 rounded-md font-bold text-slate-400 uppercase">{subject?.name || '???'}</span>
+                           <span className="text-[10px] px-2 py-0.5 bg-white border border-slate-200 rounded-md font-bold text-slate-500 uppercase">{subject?.name || '???'}</span>
                         </div>
                         <p className="text-[11px] text-slate-500 font-medium mt-1">
                           {new Date(q.startDate).toLocaleDateString('ru-RU')} — {new Date(q.endDate).toLocaleDateString('ru-RU')}
                         </p>
                       </div>
-                      <button onClick={() => handleDeleteQuarter(q.id)} className="opacity-0 group-hover:opacity-100 p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={16} /></button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button 
+                          title="Редактировать четверть (название, даты, предмет, год)"
+                          onClick={() => handleStartEditQuarter(q)} 
+                          className="p-2 text-indigo-600 hover:bg-indigo-100 bg-white border border-indigo-100 rounded-xl transition-all shadow-xs"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button 
+                          title="Удалить четверть"
+                          onClick={() => handleDeleteQuarter(q.id)} 
+                          className="p-2 text-red-500 hover:bg-red-100 bg-white border border-red-100 rounded-xl transition-all shadow-xs"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
