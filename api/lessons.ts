@@ -19,7 +19,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'POST') {
-      const { id, subjectId, classId, date, type, topic, homework, maxPoints, signature } = req.body;
+      const body = req.body;
+
+      // Поддержка пакетного создания уроков (массивом)
+      if (Array.isArray(body)) {
+        if (body.length === 0) {
+          return res.status(200).json([]);
+        }
+
+        const insertedLessons: any[] = [];
+        for (const item of body) {
+          const { id, subjectId, classId, date, type, topic, homework, maxPoints, signature } = item;
+          if (!id || !subjectId || !classId || !date) continue;
+
+          const [lesson] = await sql`
+            INSERT INTO lessons (id, subject_id, class_id, date, type, topic, homework, max_points, signature)
+            VALUES (${id}, ${subjectId}, ${classId}, ${date}, ${type}, ${topic}, ${homework}, ${maxPoints}, ${signature || null})
+            ON CONFLICT (id) DO UPDATE SET
+              subject_id = ${subjectId},
+              class_id = ${classId},
+              date = ${date},
+              type = ${type},
+              topic = ${topic},
+              homework = ${homework},
+              max_points = ${maxPoints},
+              signature = coalesce(${signature || null}, lessons.signature)
+            RETURNING id, subject_id as "subjectId", class_id as "classId", date::text, type, topic, homework, max_points as "maxPoints", signature
+          `;
+          if (lesson) insertedLessons.push(lesson);
+        }
+        return res.status(200).json(insertedLessons);
+      }
+
+      const { id, subjectId, classId, date, type, topic, homework, maxPoints, signature } = body;
 
       // Проверка на наличие предмета в базе, чтобы избежать ошибки 500 с FK Constraint
       if (subjectId) {

@@ -91,6 +91,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `;
+
+      await sql`
+        CREATE TABLE IF NOT EXISTS messages (
+          id TEXT PRIMARY KEY,
+          from_teacher_id TEXT,
+          to_student_id TEXT,
+          class_id TEXT,
+          text TEXT NOT NULL,
+          date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
     });
 
     return res.status(200).json({ success: true, message: 'Database schema initialized successfully' });

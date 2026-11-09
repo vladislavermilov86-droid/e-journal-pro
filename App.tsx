@@ -82,13 +82,14 @@ const App: React.FC = () => {
         setQuarters(initialQuarters);
       } else {
         setMode('real');
-        const [st, sb, ls, gr, qt, qm] = await Promise.all([
+        const [st, sb, ls, gr, qt, qm, msg] = await Promise.all([
           apiRequest('students'),
           apiRequest('subjects'),
           apiRequest('lessons'),
           apiRequest('grades'),
           apiRequest('quarters'),
-          apiRequest('quarter_marks')
+          apiRequest('quarter_marks'),
+          apiRequest('messages')
         ]);
         setClasses(resClasses);
         setStudents(st || []);
@@ -97,6 +98,7 @@ const App: React.FC = () => {
         setGrades(gr || []);
         setQuarters(qt || []);
         setQuarterMarks(qm || []);
+        setMessages(msg || []);
       }
     } catch (e) {
       setMode('error');
@@ -124,6 +126,28 @@ const App: React.FC = () => {
     await apiRequest('lessons', isDelete ? 'DELETE' : 'POST', lesson);
     setIsSyncing(false);
     loadAllData();
+  };
+
+  const syncBatchLessons = async (newLessons: Lesson[]) => {
+    setIsSyncing(true);
+    const result = await apiRequest('lessons', 'POST', newLessons);
+    setIsSyncing(false);
+    if (result) {
+      await loadAllData();
+      return true;
+    }
+    return false;
+  };
+
+  const syncMessage = async (message: Message) => {
+    setIsSyncing(true);
+    const result = await apiRequest('messages', 'POST', message);
+    setIsSyncing(false);
+    if (result) {
+      setMessages(prev => [result, ...prev.filter(m => m.id !== message.id)]);
+      return true;
+    }
+    return false;
   };
 
   if (isLoading) return (
@@ -206,8 +230,26 @@ const App: React.FC = () => {
               />
             } />
             <Route path="/classes" element={<ClassesPage classes={classes} students={students} setClasses={setClasses} setStudents={setStudents} />} />
-            <Route path="/schedule" element={<SchedulePage subjects={subjects} classes={classes} lessons={lessons} rules={scheduleRules} setLessons={setLessons} setRules={setScheduleRules} />} />
-            <Route path="/messages" element={<MessagesPage messages={messages} students={students} classes={classes} setMessages={setMessages} />} />
+            <Route path="/schedule" element={
+              <SchedulePage 
+                subjects={subjects} 
+                classes={classes} 
+                lessons={lessons} 
+                rules={scheduleRules} 
+                setLessons={setLessons} 
+                setRules={setScheduleRules} 
+                onBatchLessonsSave={syncBatchLessons}
+              />
+            } />
+            <Route path="/messages" element={
+              <MessagesPage 
+                messages={messages} 
+                students={students} 
+                classes={classes} 
+                setMessages={setMessages} 
+                onSendMessage={syncMessage}
+              />
+            } />
             <Route path="/stats" element={<StatsPage grades={grades} lessons={lessons} students={students} />} />
             <Route path="/settings" element={<SettingsPage classes={classes} subjects={subjects} setSubjects={setSubjects} quarters={quarters} setQuarters={setQuarters} onDataRefresh={loadAllData} />} />
             <Route path="*" element={<Navigate to="/journal" replace />} />

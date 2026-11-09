@@ -11,16 +11,18 @@ interface SchedulePageProps {
   rules: ScheduleRule[];
   setLessons: React.Dispatch<React.SetStateAction<Lesson[]>>;
   setRules: React.Dispatch<React.SetStateAction<ScheduleRule[]>>;
+  onBatchLessonsSave?: (newLessons: Lesson[]) => Promise<boolean>;
 }
 
 const SchedulePage: React.FC<SchedulePageProps> = ({ 
-  subjects, classes, lessons, rules, setLessons, setRules 
+  subjects, classes, lessons, rules, setLessons, setRules, onBatchLessonsSave
 }) => {
   const [selectedSubjectId, setSelectedSubjectId] = useState(subjects[0]?.id || '');
   const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || '');
   const [selectedDays, setSelectedDays] = useState<number[]>([2, 4, 6]); // Tue, Thu, Sat
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const daysLabels = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
@@ -30,12 +32,23 @@ const SchedulePage: React.FC<SchedulePageProps> = ({
     );
   };
 
-  const generateLessons = () => {
+  const generateLessons = async () => {
     if (!selectedSubjectId || !selectedClassId || !startDate || !endDate) {
       alert('Заполните все поля!');
       return;
     }
 
+    if (new Date(startDate) > new Date(endDate)) {
+      alert('Дата начала периода не может быть позже даты окончания!');
+      return;
+    }
+
+    if (selectedDays.length === 0) {
+      alert('Выберите хотя бы один день недели!');
+      return;
+    }
+
+    setIsGenerating(true);
     const newLessons: Lesson[] = [];
     const current = new Date(startDate);
     const end = new Date(endDate);
@@ -43,7 +56,7 @@ const SchedulePage: React.FC<SchedulePageProps> = ({
     while (current <= end) {
       if (selectedDays.includes(current.getDay())) {
         newLessons.push({
-          id: Math.random().toString(36).substr(2, 9),
+          id: `les-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 6)}`,
           subjectId: selectedSubjectId,
           classId: selectedClassId,
           date: current.toISOString().split('T')[0],
@@ -56,8 +69,25 @@ const SchedulePage: React.FC<SchedulePageProps> = ({
       current.setDate(current.getDate() + 1);
     }
 
-    setLessons(prev => [...prev, ...newLessons]);
-    alert(`Сгенерировано уроков: ${newLessons.length}`);
+    if (newLessons.length === 0) {
+      alert('В выбранном диапазоне дат нет выбранных дней недели.');
+      setIsGenerating(false);
+      return;
+    }
+
+    if (onBatchLessonsSave) {
+      const success = await onBatchLessonsSave(newLessons);
+      if (success) {
+        alert(`Успешно создано и сохранено в базу уроков: ${newLessons.length}`);
+      } else {
+        setLessons(prev => [...prev, ...newLessons]);
+        alert(`Уроки добавлены локально (${newLessons.length}), но проверьте подключение к облаку.`);
+      }
+    } else {
+      setLessons(prev => [...prev, ...newLessons]);
+      alert(`Сгенерировано уроков: ${newLessons.length}`);
+    }
+    setIsGenerating(false);
   };
 
   return (
@@ -149,10 +179,11 @@ const SchedulePage: React.FC<SchedulePageProps> = ({
 
         <button 
           onClick={generateLessons}
-          className="w-full mt-10 py-5 bg-indigo-600 text-white rounded-[2rem] font-black text-xl hover:bg-indigo-700 transform hover:scale-[1.02] transition-all shadow-2xl shadow-indigo-100 flex items-center justify-center gap-3"
+          disabled={isGenerating}
+          className="w-full mt-10 py-5 bg-indigo-600 disabled:opacity-60 text-white rounded-[2rem] font-black text-xl hover:bg-indigo-700 transform hover:scale-[1.02] transition-all shadow-2xl shadow-indigo-100 flex items-center justify-center gap-3"
         >
-          <RefreshCw size={24} />
-          Сгенерировать сетку уроков
+          <RefreshCw size={24} className={isGenerating ? "animate-spin" : ""} />
+          {isGenerating ? "Сохранение уроков в базу данных..." : "Сгенерировать сетку уроков"}
         </button>
       </div>
       

@@ -9,13 +9,15 @@ interface MessagesPageProps {
   students: Student[];
   classes: Class[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  onSendMessage?: (message: Message) => Promise<boolean>;
 }
 
-const MessagesPage: React.FC<MessagesPageProps> = ({ messages, students, classes, setMessages }) => {
+const MessagesPage: React.FC<MessagesPageProps> = ({ messages, students, classes, setMessages, onSendMessage }) => {
   const location = useLocation();
   const [targetType, setTargetType] = useState<'student' | 'class'>('student');
   const [selectedTargetId, setSelectedTargetId] = useState('');
   const [messageText, setMessageText] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     // Handle state passed from JournalPage
@@ -26,21 +28,42 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ messages, students, classes
     }
   }, [location.state]);
 
-  const handleSend = () => {
-    if (!selectedTargetId || !messageText.trim()) return;
+  const handleSend = async () => {
+    if (!selectedTargetId) {
+      alert('Пожалуйста, выберите получателя (ученика или класс)');
+      return;
+    }
+    if (!messageText.trim()) {
+      alert('Пожалуйста, введите текст сообщения');
+      return;
+    }
 
+    setIsSending(true);
     const newMessage: Message = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: `msg-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 6)}`,
       fromTeacherId: 'teacher-1',
       toStudentId: targetType === 'student' ? selectedTargetId : null,
       classId: targetType === 'class' ? selectedTargetId : (students.find(s => s.id === selectedTargetId)?.classId || ''),
-      text: messageText,
+      text: messageText.trim(),
       date: new Date().toISOString()
     };
 
-    setMessages(prev => [newMessage, ...prev]);
-    setMessageText('');
-    alert('Сообщение отправлено!');
+    if (onSendMessage) {
+      const success = await onSendMessage(newMessage);
+      if (success) {
+        setMessageText('');
+        alert('Сообщение успешно отправлено и сохранено в базе!');
+      } else {
+        setMessages(prev => [newMessage, ...prev]);
+        setMessageText('');
+        alert('Сообщение сохранено локально. Проверьте соединение с облаком.');
+      }
+    } else {
+      setMessages(prev => [newMessage, ...prev]);
+      setMessageText('');
+      alert('Сообщение отправлено!');
+    }
+    setIsSending(false);
   };
 
   return (
@@ -96,10 +119,11 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ messages, students, classes
 
             <button 
               onClick={handleSend}
-              className="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-black text-xl hover:bg-indigo-700 transform hover:scale-[1.02] transition-all shadow-2xl shadow-indigo-100 flex items-center justify-center gap-3"
+              disabled={isSending}
+              className="w-full py-5 bg-indigo-600 disabled:opacity-60 text-white rounded-[2rem] font-black text-xl hover:bg-indigo-700 transform hover:scale-[1.02] transition-all shadow-2xl shadow-indigo-100 flex items-center justify-center gap-3"
             >
-              <Send size={24} />
-              Отправить
+              <Send size={24} className={isSending ? "animate-pulse" : ""} />
+              {isSending ? "Отправка..." : "Отправить"}
             </button>
           </div>
         </div>
